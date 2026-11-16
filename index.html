@@ -17,6 +17,17 @@
     <!-- SheetJS (reads .xlsx uploads) -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <script>
+        /* Light / dark theme: choice is remembered in this browser. Default = dark. */
+        (function () {
+            var t = null;
+            try { t = localStorage.getItem('fueltrack_theme'); } catch (e) {}
+            if (t === 'light') document.documentElement.classList.add('light');
+        })();
+        function isLightTheme() { return document.documentElement.classList.contains('light'); }
+        function chartTxt() { return isLightTheme() ? '#475569' : '#94a3b8'; }
+        function chartGrid(a) { return isLightTheme() ? 'rgba(100, 116, 139, ' + a + ')' : 'rgba(51, 65, 85, ' + a + ')'; }
+    </script>
+    <script>
         tailwind.config = {
             darkMode: 'class',
             theme: {
@@ -63,6 +74,99 @@
             button, #sidebar nav a { min-height: 40px; }
             input:not([type=checkbox]):not([type=radio]):not([type=file]), select { min-height: 42px; }
         }
+        /* ---- Fuel Purchases spreadsheet grid ---- */
+        .fp-wrap { max-height: 62vh; overflow: auto; -webkit-overflow-scrolling: touch; }
+        .fp-grid { border-collapse: separate; border-spacing: 0; font-size: 13px; min-width: 1060px; width: 100%; background: #0f172a; }
+        .fp-grid th, .fp-grid td { border-right: 1px solid #1e293b; border-bottom: 1px solid #1e293b; padding: 0; }
+        .fp-grid th { position: sticky; top: 0; z-index: 3; background: #0b1220; color: #94a3b8; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .04em; text-align: left; padding: 8px; }
+        .fp-grid th.num { text-align: right; }
+        .fp-grid td.rn, .fp-grid th.rn { position: sticky; left: 0; z-index: 2; background: #0b1220; color: #64748b; text-align: center; width: 40px; min-width: 40px; font-size: 11px; }
+        .fp-grid th.rn { z-index: 4; }
+        .fp-grid input { display: block; width: 100%; min-width: 0; background: transparent; border: 0; outline: 0; padding: 8px; color: #e2e8f0; font: inherit; border-radius: 0; }
+        .fp-grid input::placeholder { color: #334155; }
+        .fp-grid input:focus { background: rgba(2, 132, 199, .18); box-shadow: inset 0 0 0 2px #0ea5e9; }
+        .fp-grid input.auto { color: #64748b; font-style: italic; }
+        .fp-grid td.num input { text-align: right; font-variant-numeric: tabular-nums; }
+        .fp-grid td.ro { padding: 8px; white-space: nowrap; color: #cbd5e1; }
+        .fp-grid td.ro.num { text-align: right; font-variant-numeric: tabular-nums; font-weight: 600; }
+        .fp-grid select.fp-status { width: 100%; background: #0f172a; border: 1px solid #334155; border-radius: 6px; padding: 3px 4px; font-size: 12px; font-weight: 600; }
+        .fp-grid select.fp-status option { color: #e2e8f0; background: #0f172a; font-weight: 400; }
+        .fp-grid td.act { text-align: center; white-space: nowrap; opacity: .35; }
+        .fp-grid tr:hover td.act, .fp-grid tr:focus-within td.act { opacity: 1; }
+        @media (pointer: coarse) { .fp-grid td.act { opacity: 1; } }
+        .fp-grid tr.fp-pay td:not(.rn) { background: rgba(16, 185, 129, .06); }
+        .fp-grid tr.fp-open td:not(.rn) { background: rgba(245, 158, 11, .07); }
+        .fp-grid tr:hover td:not(.rn) { background-color: rgba(51, 65, 85, .25); }
+        /* ================= LIGHT THEME (html.light) ================= */
+        html.light { color-scheme: light; }
+        html.light ::placeholder { color: #94a3b8; }
+        html.light .bg-slate-950 { background-color: #f1f5f9; }
+        html.light .bg-slate-900 { background-color: #ffffff; }
+        html.light .bg-slate-800 { background-color: #e2e8f0; }
+        html.light .bg-slate-700 { background-color: #cbd5e1; }
+        html.light .bg-slate-950\/60 { background-color: rgba(241, 245, 249, .85); }
+        html.light .bg-slate-950\/70 { background-color: rgba(15, 23, 42, .45); }
+        html.light .bg-slate-950\/80 { background-color: rgba(241, 245, 249, .92); }
+        html.light .bg-slate-950\/85 { background-color: rgba(15, 23, 42, .5); }
+        html.light .bg-slate-900\/50 { background-color: rgba(255, 255, 255, .6); }
+        html.light .bg-slate-900\/60 { background-color: rgba(255, 255, 255, .8); }
+        html.light .bg-slate-900\/80 { background-color: rgba(255, 255, 255, .9); }
+        html.light .bg-slate-800\/80 { background-color: rgba(226, 232, 240, .9); }
+        html.light .bg-slate-800\/90 { background-color: rgba(226, 232, 240, .95); }
+        html.light .hover\:bg-slate-700:hover { background-color: #cbd5e1; }
+        html.light .hover\:bg-slate-800:hover { background-color: #e2e8f0; }
+        html.light .hover\:bg-slate-900:hover { background-color: #f1f5f9; }
+        html.light .hover\:bg-slate-800\/40:hover { background-color: rgba(226, 232, 240, .55); }
+        html.light .hover\:bg-slate-800\/50:hover { background-color: rgba(226, 232, 240, .65); }
+        html.light .hover\:bg-slate-800\/60:hover { background-color: rgba(226, 232, 240, .8); }
+        html.light .border-slate-700 { border-color: #cbd5e1; }
+        html.light .border-slate-800, html.light .border-slate-800\/80, html.light .border-slate-800\/70 { border-color: #e2e8f0; }
+        html.light .border-slate-900 { border-color: #ffffff; }
+        html.light .divide-slate-800 > :not([hidden]) ~ :not([hidden]), html.light .divide-slate-800\/60 > :not([hidden]) ~ :not([hidden]) { border-color: #e2e8f0; }
+        html.light .text-white, html.light .hover\:text-white:hover { color: #0f172a; }
+        html.light .text-slate-100 { color: #0f172a; }
+        html.light .text-slate-200 { color: #1e293b; }
+        html.light .text-slate-300 { color: #334155; }
+        html.light .text-slate-400 { color: #475569; }
+        html.light .text-slate-500 { color: #64748b; }
+        html.light .text-slate-600 { color: #94a3b8; }
+        html.light .hover\:text-slate-300:hover { color: #0f172a; }
+        html.light .text-sky-300, html.light .text-sky-400, html.light .hover\:text-sky-300:hover, html.light .hover\:text-sky-400:hover { color: #0369a1; }
+        html.light .text-emerald-300, html.light .text-emerald-400 { color: #047857; }
+        html.light .text-emerald-500\/80, html.light .text-emerald-500\/70 { color: #059669; }
+        html.light .text-rose-200 { color: #9f1239; }
+        html.light .text-rose-300, html.light .text-rose-400, html.light .hover\:text-rose-400:hover { color: #be123c; }
+        html.light .text-amber-200, html.light .text-amber-300, html.light .text-amber-400 { color: #b45309; }
+        html.light .text-teal-300 { color: #0f766e; }
+        html.light .text-violet-300 { color: #6d28d9; }
+        html.light .text-orange-300 { color: #c2410c; }
+        html.light .text-indigo-400 { color: #4338ca; }
+        html.light .text-pink-300 { color: #be185d; }
+        /* solid coloured buttons / badges keep white text */
+        html.light :is(.bg-sky-600, .bg-sky-500, .bg-emerald-600, .bg-emerald-500, .bg-rose-600, .bg-rose-500, .bg-amber-500, .bg-amber-600, .bg-teal-600, .bg-teal-500, .bg-indigo-600, .bg-indigo-500, [class*="bg-gradient"]).text-white,
+        html.light :is(.bg-sky-600, .bg-emerald-600, .bg-rose-600, .bg-teal-600, .bg-indigo-600, [class*="bg-gradient"]) .text-white { color: #ffffff; }
+        html.light button.disabled\:bg-slate-800:disabled { background-color: #e2e8f0; color: #94a3b8; }
+        html.light #lowStockBanner.text-white, html.light #lowStockBanner .text-white { color: #ffffff; }
+        html.light #lowStockBanner button { background-color: rgba(15, 23, 42, .55); color: #fde68a; }
+        html.light .custom-scrollbar::-webkit-scrollbar-track { background: rgba(226, 232, 240, 0.7); }
+        html.light .custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(148, 163, 184, 0.8); }
+        html.light .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: rgba(100, 116, 139, 1); }
+        html.light #sidebar { box-shadow: 0 0 30px rgba(15, 23, 42, .12); }
+        /* Fuel Purchases grid */
+        html.light .fp-grid { background: #ffffff; }
+        html.light .fp-grid th, html.light .fp-grid td { border-right-color: #e2e8f0; border-bottom-color: #e2e8f0; }
+        html.light .fp-grid th { background: #f1f5f9; color: #475569; }
+        html.light .fp-grid td.rn, html.light .fp-grid th.rn { background: #f1f5f9; color: #64748b; }
+        html.light .fp-grid input { color: #0f172a; }
+        html.light .fp-grid input::placeholder { color: #cbd5e1; }
+        html.light .fp-grid input.auto { color: #94a3b8; }
+        html.light .fp-grid td.ro { color: #334155; }
+        html.light .fp-grid select.fp-status { background: #ffffff; border-color: #cbd5e1; }
+        html.light .fp-grid select.fp-status option { color: #0f172a; background: #ffffff; }
+        html.light .fp-grid tr:hover td:not(.rn) { background-color: rgba(226, 232, 240, .6); }
+        html.light .fp-grid tr.fp-pay td:not(.rn) { background: rgba(16, 185, 129, .1); }
+        html.light .fp-grid tr.fp-open td:not(.rn) { background: rgba(245, 158, 11, .12); }
+        html.light .fp-grid input:focus { background: rgba(2, 132, 199, .1); }
         @media print {
             .print-only { display: block !important; }
             aside, header, #lowStockBanner, .no-print { display: none !important; }
@@ -111,6 +215,12 @@
                 <a href="#" onclick="switchTab('receive')" id="nav-receive" class="nav-item flex items-center space-x-3 px-3.5 py-2.5 rounded-xl font-medium text-sm transition text-slate-400 hover:text-white hover:bg-slate-800/60">
                     <i class="fa-solid fa-truck-arrow-right w-5 text-center"></i>
                     <span>Receive Fuel</span>
+                </a>
+
+                <a href="#" onclick="switchTab('purchases')" id="nav-purchases" class="nav-item flex items-center space-x-3 px-3.5 py-2.5 rounded-xl font-medium text-sm transition text-slate-400 hover:text-white hover:bg-slate-800/60">
+                    <i class="fa-solid fa-file-invoice-dollar w-5 text-center"></i>
+                    <span>Fuel Purchases</span>
+                    <span id="navPurchasesBadge" title="Suppliers with overdue payments" class="hidden ml-auto min-w-[1.25rem] text-center text-[10px] font-bold bg-rose-500 text-white rounded-full px-1.5 py-0.5"></span>
                 </a>
 
                 <a href="#" onclick="switchTab('issue')" id="nav-issue" class="nav-item flex items-center space-x-3 px-3.5 py-2.5 rounded-xl font-medium text-sm transition text-slate-400 hover:text-white hover:bg-slate-800/60">
@@ -164,6 +274,12 @@
                     <span id="currentDateBadge" class="hidden md:inline-block shrink-0 text-xs font-medium px-2.5 py-1 bg-slate-800 border border-slate-700 text-slate-400 rounded-full">--</span>
                 </div>
                 <div class="flex items-center gap-2 sm:gap-3 shrink-0">
+                    <button type="button" id="tlLockNowBtn" onclick="tlLockNow()" aria-label="Lock tabs now" title="Lock all protected tabs again" class="hidden px-3 py-1.5 text-xs font-medium bg-amber-500/10 hover:bg-amber-500/20 text-amber-300 rounded-lg border border-amber-500/30 transition flex items-center gap-1.5">
+                        <i class="fa-solid fa-lock"></i> <span class="hidden sm:inline">Lock now</span>
+                    </button>
+                    <button type="button" id="themeToggleBtn" onclick="toggleTheme()" aria-label="Switch to light mode" title="Switch between light and dark mode" class="px-3 py-1.5 text-xs font-medium bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg border border-slate-700 transition flex items-center gap-1.5">
+                        <i id="themeToggleIcon" class="fa-solid fa-sun"></i> <span id="themeToggleLabel" class="hidden sm:inline">Light mode</span>
+                    </button>
                     <button onclick="clearAllData()" aria-label="Clear all data" class="px-3 py-1.5 text-xs font-medium bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg border border-slate-700 transition flex items-center gap-1.5">
                         <i class="fa-solid fa-trash-can"></i> <span class="hidden sm:inline">Clear All Data</span>
                     </button>
@@ -182,118 +298,73 @@
                 <!-- TAB 1: DASHBOARD -->
                 <section id="tab-dashboard" class="space-y-6">
 
-                    <!-- Fuel Tanks Capacity Visual Gauges -->
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        <!-- Tank 1: Diesel / AGO -->
-                        <div class="bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-xl relative overflow-hidden">
-                            <div class="flex justify-between items-start mb-4">
-                                <div>
-                                    <div class="flex items-center gap-2">
-                                        <span class="h-3 w-3 rounded-full bg-amber-500"></span>
-                                        <h3 class="font-bold text-slate-100 text-base">Diesel Storage Tank (AGO)</h3>
-                                    </div>
-                                    <p class="text-xs text-slate-400 mt-1">Total Tank Capacity: <span id="dieselMaxDisplay">50,000</span> L</p>
-                                </div>
-                                <span id="dieselBadge" class="text-xs font-semibold px-2.5 py-1 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">Optimal</span>
-                            </div>
-
-                            <div class="space-y-2">
-                                <div class="flex justify-between text-sm">
-                                    <span class="text-slate-400">Current Level</span>
-                                    <span class="font-bold text-white"><span id="dieselCurrentVal">0</span> L (<span id="dieselPctVal">0</span>%)</span>
-                                </div>
-                                <!-- Progress Bar Visual -->
-                                <div class="w-full bg-slate-800 rounded-xl h-5 p-0.5 overflow-hidden border border-slate-700/50">
-                                    <div id="dieselBar" class="h-full bg-gradient-to-r from-amber-600 to-amber-400 rounded-lg transition-all duration-500" style="width: 0%"></div>
-                                </div>
-                            </div>
-                            <div class="mt-4 pt-3 border-t border-slate-800/80 flex justify-between text-xs text-slate-400">
-                                <span>Reorder Point: <strong class="text-slate-300" id="dieselMinDisplay">8,000 L</strong></span>
-                                <span id="dieselUpdatedTime">Updated just now</span>
-                            </div>
-                        </div>
-
-                        <!-- Tank 2: Petrol / PMS -->
-                        <div class="bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-xl relative overflow-hidden">
-                            <div class="flex justify-between items-start mb-4">
-                                <div>
-                                    <div class="flex items-center gap-2">
-                                        <span class="h-3 w-3 rounded-full bg-sky-500"></span>
-                                        <h3 class="font-bold text-slate-100 text-base">Petrol Storage Tank (PMS)</h3>
-                                    </div>
-                                    <p class="text-xs text-slate-400 mt-1">Total Tank Capacity: <span id="petrolMaxDisplay">40,000</span> L</p>
-                                </div>
-                                <span id="petrolBadge" class="text-xs font-semibold px-2.5 py-1 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">Optimal</span>
-                            </div>
-
-                            <div class="space-y-2">
-                                <div class="flex justify-between text-sm">
-                                    <span class="text-slate-400">Current Level</span>
-                                    <span class="font-bold text-white"><span id="petrolCurrentVal">0</span> L (<span id="petrolPctVal">0</span>%)</span>
-                                </div>
-                                <!-- Progress Bar Visual -->
-                                <div class="w-full bg-slate-800 rounded-xl h-5 p-0.5 overflow-hidden border border-slate-700/50">
-                                    <div id="petrolBar" class="h-full bg-gradient-to-r from-sky-600 to-sky-400 rounded-lg transition-all duration-500" style="width: 0%"></div>
-                                </div>
-                            </div>
-                            <div class="mt-4 pt-3 border-t border-slate-800/80 flex justify-between text-xs text-slate-400">
-                                <span>Reorder Point: <strong class="text-slate-300" id="petrolMinDisplay">6,000 L</strong></span>
-                                <span id="petrolUpdatedTime">Updated just now</span>
-                            </div>
+                    <!-- Header + active fuel switches -->
+                    <div class="flex flex-wrap items-center justify-between gap-3">
+                        <div><h3 class="text-white font-bold text-lg">Fuel Overview</h3></div>
+                        <div class="flex items-center gap-2">
+                            <span class="text-[11px] text-slate-500 uppercase tracking-wider">Active fuels</span>
+                            <div id="fuelToggleDash" class="flex gap-1.5"></div>
                         </div>
                     </div>
 
-                    <!-- Key Metrics Cards -->
-                    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                        <div class="bg-slate-900/80 border border-slate-800 rounded-xl p-4 flex items-center space-x-4">
-                            <div class="p-3 bg-sky-500/10 border border-sky-500/20 rounded-xl text-sky-400">
-                                <i class="fa-solid fa-layer-group text-xl"></i>
-                            </div>
-                            <div>
-                                <p class="text-xs font-medium text-slate-400">Total Stock Available</p>
-                                <h4 class="text-xl font-bold text-white mt-0.5" id="kpiTotalStock">0 L</h4>
-                            </div>
-                        </div>
-
-                        <div class="bg-slate-900/80 border border-slate-800 rounded-xl p-4 flex items-center space-x-4">
-                            <div class="p-3 bg-emerald-500/10 border border-emerald-500/20 rounded-xl text-emerald-400">
-                                <i class="fa-solid fa-arrow-down-left-and-arrow-up-right-to-center text-xl"></i>
-                            </div>
-                            <div>
-                                <p class="text-xs font-medium text-slate-400">Received (Today)</p>
-                                <h4 class="text-xl font-bold text-white mt-0.5" id="kpiReceivedToday">0 L</h4>
-                            </div>
-                        </div>
-
-                        <div class="bg-slate-900/80 border border-slate-800 rounded-xl p-4 flex items-center space-x-4">
-                            <div class="p-3 bg-indigo-500/10 border border-indigo-500/20 rounded-xl text-indigo-400">
-                                <i class="fa-solid fa-gas-pump text-xl"></i>
-                            </div>
-                            <div>
-                                <p class="text-xs font-medium text-slate-400">Issued Today (Main Base)</p>
-                                <h4 class="text-xl font-bold text-white mt-0.5" id="kpiIssuedToday">0 L</h4>
-                            </div>
-                        </div>
-
-                        <div class="bg-slate-900/80 border border-slate-800 rounded-xl p-4 flex items-center space-x-4">
-                            <div class="p-3 bg-amber-500/10 border border-amber-500/20 rounded-xl text-amber-400">
-                                <i class="fa-solid fa-bell text-xl"></i>
-                            </div>
-                            <div>
-                                <p class="text-xs font-medium text-slate-400">Active Threshold Alerts</p>
-                                <h4 class="text-xl font-bold text-white mt-0.5" id="kpiActiveAlerts">0</h4>
-                            </div>
+                    <!-- KPI strip -->
+                    <div class="bg-slate-900 border border-slate-800 rounded-2xl">
+                        <div class="grid grid-cols-2 lg:grid-cols-4 divide-x divide-y lg:divide-y-0 divide-slate-800">
+                            <div class="flex items-center gap-3 p-4"><span class="h-9 w-9 rounded-xl bg-sky-500/10 text-sky-400 flex items-center justify-center"><i class="fa-solid fa-layer-group"></i></span><div><p class="text-[11px] text-slate-500">Main base stock</p><p class="text-lg font-bold text-white leading-tight" id="kpiTotalStock">0</p></div></div>
+                            <div class="flex items-center gap-3 p-4"><span class="h-9 w-9 rounded-xl bg-emerald-500/10 text-emerald-400 flex items-center justify-center"><i class="fa-solid fa-arrow-down"></i></span><div><p class="text-[11px] text-slate-500">Received today</p><p class="text-lg font-bold text-white leading-tight" id="kpiReceivedToday">0</p></div></div>
+                            <div class="flex items-center gap-3 p-4"><span class="h-9 w-9 rounded-xl bg-indigo-500/10 text-indigo-400 flex items-center justify-center"><i class="fa-solid fa-gas-pump"></i></span><div><p class="text-[11px] text-slate-500">Issued today (main base)</p><p class="text-lg font-bold text-white leading-tight" id="kpiIssuedToday">0</p></div></div>
+                            <div class="flex items-center gap-3 p-4"><span class="h-9 w-9 rounded-xl bg-amber-500/10 text-amber-400 flex items-center justify-center"><i class="fa-solid fa-bell"></i></span><div><p class="text-[11px] text-slate-500">Active alerts</p><p class="text-lg font-bold text-white leading-tight" id="kpiActiveAlerts">0</p></div></div>
                         </div>
                     </div>
 
-                    <!-- Fuel Cards by Base -->
-                    <div>
-                        <div class="flex items-center justify-between mb-2">
-                            <h3 class="font-bold text-white text-base flex items-center gap-2"><i class="fa-solid fa-credit-card text-teal-300"></i> Fuel Cards by Base</h3>
-                            <button type="button" onclick="switchTab('cards')" class="text-xs font-semibold text-sky-400 hover:text-sky-300">Manage cards <i class="fa-solid fa-arrow-right ml-1"></i></button>
+                    <!-- MAIN BASE -->
+                    <section>
+                        <div class="flex items-center gap-2 mb-3"><i class="fa-solid fa-warehouse text-sky-400"></i><h3 class="font-bold text-white text-sm uppercase tracking-wider">Main Base · Storage Tanks</h3></div>
+                        <div id="dashTankGrid" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div id="dieselTankCard" class="bg-slate-900 border border-slate-800 rounded-2xl p-5">
+                            <div class="flex justify-between items-start">
+                                <div class="flex items-center gap-3">
+                                    <span class="h-9 w-9 rounded-xl bg-amber-500/10 text-amber-400 flex items-center justify-center"><i class="fa-solid fa-droplet"></i></span>
+                                    <div><h4 class="font-semibold text-slate-100 text-sm">Diesel <span class="text-slate-500 font-normal">(AGO)</span></h4>
+                                    <p class="text-[11px] text-slate-500">Capacity <span id="dieselMaxDisplay">0</span> L</p></div>
+                                </div>
+                                <span id="dieselBadge" class="text-[11px] font-semibold px-2.5 py-1 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">Optimal</span>
+                            </div>
+                            <div class="mt-5 flex items-end justify-between">
+                                <div class="text-3xl font-bold text-white tracking-tight"><span id="dieselCurrentVal">0</span> <span class="text-base font-medium text-slate-500">L</span></div>
+                                <div class="text-sm font-semibold text-slate-300"><span id="dieselPctVal">0</span>%</div>
+                            </div>
+                            <div class="mt-3 w-full bg-slate-800 rounded-full h-2.5 overflow-hidden"><div id="dieselBar" class="h-full bg-gradient-to-r from-amber-600 to-amber-400 rounded-full transition-all duration-500" style="width:0%"></div></div>
+                            <p class="mt-3 text-[11px] text-slate-500">Reorder point <strong class="text-slate-300" id="dieselMinDisplay">0 L</strong></p>
+                        </div>
+                        <div id="petrolTankCard" class="bg-slate-900 border border-slate-800 rounded-2xl p-5">
+                            <div class="flex justify-between items-start">
+                                <div class="flex items-center gap-3">
+                                    <span class="h-9 w-9 rounded-xl bg-sky-500/10 text-sky-400 flex items-center justify-center"><i class="fa-solid fa-droplet"></i></span>
+                                    <div><h4 class="font-semibold text-slate-100 text-sm">Petrol <span class="text-slate-500 font-normal">(PMS)</span></h4>
+                                    <p class="text-[11px] text-slate-500">Capacity <span id="petrolMaxDisplay">0</span> L</p></div>
+                                </div>
+                                <span id="petrolBadge" class="text-[11px] font-semibold px-2.5 py-1 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">Optimal</span>
+                            </div>
+                            <div class="mt-5 flex items-end justify-between">
+                                <div class="text-3xl font-bold text-white tracking-tight"><span id="petrolCurrentVal">0</span> <span class="text-base font-medium text-slate-500">L</span></div>
+                                <div class="text-sm font-semibold text-slate-300"><span id="petrolPctVal">0</span>%</div>
+                            </div>
+                            <div class="mt-3 w-full bg-slate-800 rounded-full h-2.5 overflow-hidden"><div id="petrolBar" class="h-full bg-gradient-to-r from-sky-600 to-sky-400 rounded-full transition-all duration-500" style="width:0%"></div></div>
+                            <p class="mt-3 text-[11px] text-slate-500">Reorder point <strong class="text-slate-300" id="petrolMinDisplay">0 L</strong></p>
+                        </div>
+                        </div>
+                    </section>
+
+                    <!-- OTHER BASES (CARDS) -->
+                    <section>
+                        <div class="flex items-center justify-between mb-3">
+                            <div class="flex items-center gap-2"><i class="fa-solid fa-credit-card text-teal-300"></i><h3 class="font-bold text-white text-sm uppercase tracking-wider">Other Bases · Fuel Cards</h3></div>
+                            <div class="flex items-center gap-3"><span class="text-xs text-slate-500">Total balance <strong id="dashCardsTotal" class="text-slate-200"></strong></span>
+                            <button type="button" onclick="switchTab('cards')" class="text-xs font-semibold text-sky-400 hover:text-sky-300">Manage <i class="fa-solid fa-arrow-right ml-1"></i></button></div>
                         </div>
                         <div id="dashCardBases" class="grid grid-cols-1 md:grid-cols-3 gap-4"></div>
-                    </div>
+                    </section>
 
                     <!-- Dashboard Visual Chart & Recent Activity Stream -->
                     <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -355,9 +426,15 @@
                                     <label class="block text-xs font-semibold text-slate-300 mb-1">Quantity Received (Liters)</label>
                                     <input type="number" id="rcvQuantity" min="1" step="0.1" placeholder="e.g. 15000" required class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-sm text-slate-100 focus:outline-none focus:border-sky-500">
                                 </div>
-                                <div>
-                                    <label class="block text-xs font-semibold text-slate-300 mb-1">Waybill / Invoice #</label>
-                                    <input type="text" id="rcvWaybill" placeholder="e.g. WB-99482" required class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-sm text-slate-100 focus:outline-none focus:border-sky-500">
+                                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                    <div>
+                                        <label class="block text-xs font-semibold text-slate-300 mb-1">Waybill / Invoice #</label>
+                                        <input type="text" id="rcvWaybill" placeholder="e.g. WB-99482" required class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-sm text-slate-100 focus:outline-none focus:border-sky-500">
+                                    </div>
+                                    <div>
+                                        <label class="block text-xs font-semibold text-slate-300 mb-1">Invoice Date</label>
+                                        <input type="date" id="rcvInvoiceDate" required class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-sm text-slate-100 focus:outline-none focus:border-sky-500">
+                                    </div>
                                 </div>
                                 <div>
                                     <label class="block text-xs font-semibold text-slate-300 mb-1">Recipient Officer Name</label>
@@ -376,7 +453,6 @@
                                 <div>
                                     <label class="block text-xs font-semibold text-slate-300 mb-1">Unit Price per Liter (GH₵) <span class="text-slate-500 font-normal">(optional)</span></label>
                                     <input type="number" id="rcvPrice" min="0" step="0.0001" placeholder="e.g. 14.50" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-sm text-slate-100 focus:outline-none focus:border-sky-500">
-                                    <p class="text-[10px] text-slate-500 mt-1">Used for cost totals in the Stock Received report.</p>
                                 </div>
                                 <div>
                                     <label class="block text-xs font-semibold text-slate-300 mb-1">Remarks <span class="text-slate-500 font-normal">(optional)</span></label>
@@ -385,7 +461,6 @@
                                 <button type="submit" class="w-full py-2.5 px-4 bg-emerald-600 hover:bg-emerald-500 text-white font-semibold rounded-xl shadow-lg shadow-emerald-600/20 transition flex items-center justify-center gap-2">
                                     <i class="fa-solid fa-clipboard-check"></i> Review &amp; Approve Delivery
                                 </button>
-                                <p class="text-[11px] text-slate-500 text-center">Nothing is saved until the delivery is approved in the next two steps.</p>
                             </form>
                         </div>
 
@@ -428,6 +503,121 @@
                     </div>
                 </section>
 
+                <!-- TAB: FUEL PURCHASES (supplier accounts, credit terms, spreadsheet ledger) -->
+                <section id="tab-purchases" class="hidden space-y-6">
+                    <!-- Suppliers overview -->
+                    <div class="bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-xl">
+                        <div class="flex flex-wrap items-center justify-between gap-2 mb-3">
+                            <div>
+                                <h3 class="font-bold text-white text-base"><i class="fa-solid fa-file-invoice-dollar text-amber-400 mr-2"></i>Fuel Purchases: Supplier Accounts</h3>
+                            </div>
+                            <div class="flex flex-wrap gap-1.5 no-print">
+                                <button type="button" onclick="fpOpenSupplier()" class="px-3 py-1.5 text-xs font-semibold bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg shadow-lg shadow-emerald-600/20"><i class="fa-solid fa-plus mr-1"></i> Add Supplier</button>
+                                <button type="button" onclick="fpExportExcel()" class="px-3 py-1.5 text-xs font-semibold bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-lg border border-slate-700"><i class="fa-solid fa-file-excel mr-1"></i> Export Excel</button>
+                            </div>
+                        </div>
+                        <div id="fpNoSupplier" class="hidden text-center py-10">
+                            <i class="fa-solid fa-store text-3xl text-slate-600 mb-3"></i>
+                            <p class="text-sm text-slate-300 font-semibold">No suppliers yet</p>
+                            <button type="button" onclick="fpOpenSupplier()" class="px-4 py-2 text-xs font-semibold bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg"><i class="fa-solid fa-plus mr-1"></i> Add Supplier</button>
+                        </div>
+                        <div id="fpSummaryWrap" class="overflow-x-auto custom-scrollbar">
+                            <table class="w-full text-left text-sm text-slate-300">
+                                <thead class="bg-slate-950 text-xs font-semibold text-slate-400 uppercase tracking-wider border-b border-slate-800">
+                                    <tr><th class="py-3 px-3">Supplier</th><th class="py-3 px-3">Payment terms</th><th class="py-3 px-3 text-right">Purchases (DR)</th><th class="py-3 px-3 text-right">Paid (CR)</th><th class="py-3 px-3 text-right">Balance owed</th><th class="py-3 px-3 text-right">Overdue</th><th class="py-3 px-3">Earliest unpaid due</th></tr>
+                                </thead>
+                                <tbody id="fpSummaryBody" class="divide-y divide-slate-800"></tbody>
+                                <tfoot id="fpSummaryFoot" class="border-t-2 border-slate-700 bg-slate-950/60"></tfoot>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- Selected supplier ledger -->
+                    <div id="fpLedgerCard" class="hidden bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-xl">
+                        <p id="fpPrintTitle" class="print-only text-sm font-bold mb-2"></p>
+                        <div class="flex flex-wrap items-center justify-between gap-2 mb-3">
+                            <div class="flex flex-wrap items-center gap-2">
+                                <h3 class="font-bold text-white text-base"><i class="fa-solid fa-table-cells text-slate-400 mr-2"></i>Ledger</h3>
+                                <select id="fpSupplierSel" onchange="fpSelect(this.value)" class="bg-slate-950 border border-slate-700 rounded-xl px-3 py-1.5 text-sm text-slate-100 focus:outline-none focus:border-sky-500 max-w-[16rem]"></select>
+                                <span id="fpTermsBadge"></span>
+                            </div>
+                            <div class="flex flex-wrap gap-1.5 no-print">
+                                <button type="button" onclick="fpImportReceived()" title="Add purchases already recorded in Receive Fuel for this supplier" class="px-3 py-1.5 text-xs font-semibold bg-sky-600 hover:bg-sky-500 text-white rounded-lg"><i class="fa-solid fa-download mr-1"></i> Import from Stock Received</button>
+                                <button type="button" onclick="fpEditCurrent()" class="px-3 py-1.5 text-xs font-semibold bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-lg border border-slate-700"><i class="fa-solid fa-sliders mr-1"></i> Supplier &amp; payment terms</button>
+                                <button type="button" onclick="window.print()" class="px-3 py-1.5 text-xs font-semibold bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-lg border border-slate-700"><i class="fa-solid fa-print mr-1"></i> Print</button>
+                                <button type="button" onclick="fpOpenClear()" class="px-3 py-1.5 text-xs font-semibold bg-rose-600/15 hover:bg-rose-600/30 text-rose-300 rounded-lg border border-rose-500/30"><i class="fa-solid fa-trash-can mr-1"></i> Clear ledger records</button>
+                            </div>
+                        </div>
+                        <div id="fpKpis" class="grid grid-cols-2 lg:grid-cols-5 gap-2 mb-3"></div>
+                        <div class="fp-wrap custom-scrollbar rounded-xl border border-slate-800">
+                            <table class="fp-grid">
+                                <thead>
+                                    <tr>
+                                        <th class="rn">#</th><th style="min-width:118px">Invoice date</th><th style="min-width:118px">Received date</th><th style="min-width:128px">Payment due date</th><th style="min-width:260px">Description</th>
+                                        <th class="num" style="min-width:130px">DR (purchase)</th><th class="num" style="min-width:130px">CR (payment)</th><th class="num" style="min-width:130px">Balance</th><th style="min-width:190px">Status</th><th style="width:64px"></th>
+                                    </tr>
+                                </thead>
+                                <tbody id="fpBody"></tbody>
+                            </table>
+                        </div>
+                        <datalist id="fpDescList"></datalist>
+                    </div>
+                </section>
+
+                <!-- Add / edit supplier -->
+                <div id="fpSupplierModal" class="hidden fixed inset-0 z-[60] bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4 no-print">
+                    <div class="w-full max-w-md bg-slate-900 border border-slate-700 rounded-2xl p-5 shadow-2xl">
+                        <div class="flex items-center justify-between mb-4">
+                            <h3 id="fpModalTitle" class="font-bold text-white text-base">Add supplier</h3>
+                            <button type="button" onclick="fpCloseSupplier()" class="text-slate-400 hover:text-white" title="Close"><i class="fa-solid fa-xmark"></i></button>
+                        </div>
+                        <form onsubmit="fpSaveSupplier(event)" class="space-y-4">
+                            <div>
+                                <label class="block text-xs font-semibold text-slate-300 mb-1">Supplier name</label>
+                                <input type="text" id="fpSupName" required placeholder="e.g. Star Oil / Bulk Depot" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-sm text-slate-100 focus:outline-none focus:border-sky-500">
+                            </div>
+                            <div>
+                                <label class="block text-xs font-semibold text-slate-300 mb-1">How do you pay this supplier?</label>
+                                <div class="grid grid-cols-2 gap-2">
+                                    <label class="flex items-center gap-2 bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-sm cursor-pointer"><input type="radio" name="fpMode" id="fpModeCredit" onchange="fpModeChanged()" checked> Credit (days)</label>
+                                    <label class="flex items-center gap-2 bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-sm cursor-pointer"><input type="radio" name="fpMode" id="fpModeInstant" onchange="fpModeChanged()"> Instant pay</label>
+                                </div>
+                            </div>
+                            <div id="fpCreditBox" class="space-y-3">
+                                <div>
+                                    <label class="block text-xs font-semibold text-slate-300 mb-1">Credit period (number of days)</label>
+                                    <input type="number" id="fpSupDays" min="1" max="365" step="1" value="30" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-sm text-slate-100 focus:outline-none focus:border-sky-500">
+                                    <div class="flex flex-wrap gap-1.5 mt-2">
+                                        <button type="button" onclick="document.getElementById('fpSupDays').value=7" class="px-2 py-1 text-[11px] rounded-lg bg-slate-800 border border-slate-700 text-slate-300 hover:bg-slate-700">7</button>
+                                        <button type="button" onclick="document.getElementById('fpSupDays').value=14" class="px-2 py-1 text-[11px] rounded-lg bg-slate-800 border border-slate-700 text-slate-300 hover:bg-slate-700">14</button>
+                                        <button type="button" onclick="document.getElementById('fpSupDays').value=30" class="px-2 py-1 text-[11px] rounded-lg bg-slate-800 border border-slate-700 text-slate-300 hover:bg-slate-700">30</button>
+                                        <button type="button" onclick="document.getElementById('fpSupDays').value=45" class="px-2 py-1 text-[11px] rounded-lg bg-slate-800 border border-slate-700 text-slate-300 hover:bg-slate-700">45</button>
+                                        <button type="button" onclick="document.getElementById('fpSupDays').value=60" class="px-2 py-1 text-[11px] rounded-lg bg-slate-800 border border-slate-700 text-slate-300 hover:bg-slate-700">60</button>
+                                    </div>
+                                </div>
+                            </div>
+                            <div>
+                                <label class="block text-xs font-semibold text-slate-300 mb-1">Payment due date is counted from</label>
+                                <select id="fpSupFrom" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-sm text-slate-100 focus:outline-none focus:border-sky-500">
+                                    <option value="received">Received date (when fuel is delivered)</option>
+                                    <option value="invoice">Invoice date (as entered in Stock Received)</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-xs font-semibold text-slate-300 mb-1">Notes (optional)</label>
+                                <input type="text" id="fpSupNotes" placeholder="Contact, account no., agreement…" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-sm text-slate-100 focus:outline-none focus:border-sky-500">
+                            </div>
+                            <div class="flex items-center justify-between gap-2 pt-1">
+                                <button type="button" id="fpSupDelete" onclick="fpDeleteSupplier()" class="hidden px-3 py-2 text-xs font-semibold bg-rose-600/15 hover:bg-rose-600/30 text-rose-300 rounded-lg border border-rose-500/30"><i class="fa-solid fa-trash-can mr-1"></i> Delete</button>
+                                <div class="flex gap-2 ml-auto">
+                                    <button type="button" onclick="fpCloseSupplier()" class="px-4 py-2 text-xs font-semibold bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-lg border border-slate-700">Cancel</button>
+                                    <button type="submit" class="px-4 py-2 text-xs font-semibold bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg">Save supplier</button>
+                                </div>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+
                 <!-- TAB 3: ISSUE / DISPENSE FUEL -->
                 <section id="tab-issue" class="hidden space-y-6">
                     <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -447,15 +637,11 @@
                                 <div>
                                     <label class="block text-xs font-semibold text-slate-300 mb-1">Issue From</label>
                                     <select id="issSource" onchange="updateIssueFormMode(false)" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-sm text-slate-100 focus:outline-none focus:border-sky-500">
-                                        <option value="Main Base">Main Base (tank stock)</option>
+                                        <option value="Main Base">Main Base – Tema (tank stock)</option>
                                         <option value="Kumasi">Kumasi (fuel cards)</option>
                                         <option value="Buipe">Buipe (fuel cards)</option>
                                         <option value="Takoradi">Takoradi (fuel cards)</option>
                                     </select>
-                                </div>
-                                <div id="issCardNoWrap" class="hidden">
-                                    <label class="block text-xs font-semibold text-slate-300 mb-1">Card No. Used <span class="text-slate-500 font-normal">(optional)</span></label>
-                                    <input type="text" id="issCardNo" placeholder="e.g. last digits of the card" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-sm text-slate-100 focus:outline-none focus:border-sky-500">
                                 </div>
                                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
                                     <div>
@@ -479,18 +665,41 @@
                                         <!-- Dynamically populated -->
                                     </select>
                                 </div>
+                                <div>
+                                    <label class="block text-xs font-semibold text-slate-300 mb-1">Product Type</label>
+                                    <select id="issProductType" required class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-sm text-slate-100 focus:outline-none focus:border-sky-500">
+                                        <option value="White Product">White Product</option>
+                                        <option value="Lube">Lube</option>
+                                        <option value="Gas">Gas</option>
+                                        <option value="Others">Others</option>
+                                        <option value="N/A" selected>N/A</option>
+                                    </select>
+                                </div>
                                 <div id="issDestWrap">
                                     <label class="block text-xs font-semibold text-slate-300 mb-1">Select Route / Destination</label>
                                     <select id="issDestSelect" required onchange="toggleCustomDest()" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-sm text-slate-100 focus:outline-none focus:border-sky-500">
                                         <!-- Dynamically populated -->
                                     </select>
                                     <div id="issDestCustomWrap" class="hidden mt-2 space-y-2">
-                                        <input type="text" id="issDestCustom" list="issDestHistory" maxlength="80" autocomplete="off" placeholder="Type the destination / route, e.g. Kumasi - Tamale" class="w-full bg-slate-950 border border-sky-600/60 rounded-xl px-3 py-2 text-sm text-slate-100 focus:outline-none focus:border-sky-500">
+                                        <input type="text" id="issDestCustom" list="issDestHistory" maxlength="80" autocomplete="off" oninput="updateRoutePreview()" placeholder="Type the destination / route, e.g. Kumasi - Tamale" class="w-full bg-slate-950 border border-sky-600/60 rounded-xl px-3 py-2 text-sm text-slate-100 focus:outline-none focus:border-sky-500">
                                         <datalist id="issDestHistory"></datalist>
                                         <label class="flex items-center gap-2 text-[11px] text-slate-400 cursor-pointer">
                                             <input type="checkbox" id="issDestSave" class="accent-sky-500">
                                             Also save this destination to the Destinations list
                                         </label>
+                                    </div>
+                                    <!-- Additional stops for a multi-destination trip -->
+                                    <div id="issExtraStopsWrap" class="mt-2 space-y-2">
+                                        <div id="issExtraStops" class="space-y-2"></div>
+                                        <datalist id="issStopList"></datalist>
+                                        <button type="button" id="issAddStopBtn" onclick="addDestStop()" class="text-xs font-semibold text-sky-400 hover:text-sky-300 flex items-center gap-1.5">
+                                            <i class="fa-solid fa-circle-plus"></i> Add another destination
+                                        </button>
+                                        <label id="issStopSaveWrap" class="hidden flex items-center gap-2 text-[11px] text-slate-400 cursor-pointer">
+                                            <input type="checkbox" id="issStopSave" class="accent-sky-500">
+                                            Save new destinations to the Destinations list
+                                        </label>
+                                        <p id="issRoutePreview" class="hidden text-[11px] text-sky-300 bg-sky-500/10 border border-sky-500/20 rounded-lg px-2.5 py-1.5"></p>
                                     </div>
                                 </div>
                                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -565,7 +774,7 @@
                                             <th class="py-3 px-3 text-right">Qty (L)</th>
                                             <th class="py-3 px-3 text-right">Rate (GH₵/L)</th>
                                             <th class="py-3 px-3 text-right">Amount (GH₵)</th>
-                                            <th class="py-3 px-3">Meter</th>
+                                            <th class="py-3 px-3">Odometer</th>
                                             <th class="py-3 px-3">Driver / Operator</th>
                                         </tr>
                                     </thead>
@@ -583,7 +792,6 @@
                     <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
                         <div>
                             <h3 class="font-bold text-white text-lg">Fuel Cards by Base</h3>
-                            <p class="text-xs text-slate-400 mt-0.5">Load cards at Kumasi, Buipe or Takoradi, then issue from them on <button type="button" onclick="switchTab('issue')" class="text-sky-400 hover:text-sky-300 underline">Dispense / Issue</button> by choosing the base under "Issue From". Cards are loaded in cedis (GH₵) and every issue deducts litres × rate from the balance. Main Base tank stock is not affected.</p>
                         </div>
                     </div>
 
@@ -601,7 +809,7 @@
                                 </div>
                                 <div>
                                     <label class="block text-xs font-semibold text-slate-300 mb-1">Base</label>
-                                    <select id="clBase" required class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-sm text-slate-100 focus:outline-none focus:border-sky-500">
+                                    <select id="clBase" required onchange="updateCardLoadFormInfo()" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-sm text-slate-100 focus:outline-none focus:border-sky-500">
                                         <option value="Kumasi">Kumasi</option>
                                         <option value="Buipe">Buipe</option>
                                         <option value="Takoradi">Takoradi</option>
@@ -617,14 +825,25 @@
                                         <input type="text" id="clRef" placeholder="e.g. TOPUP-1042" required class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-sm text-slate-100 focus:outline-none focus:border-sky-500">
                                     </div>
                                     <div>
-                                        <label class="block text-xs font-semibold text-slate-300 mb-1">Card No. <span class="text-slate-500 font-normal">(optional)</span></label>
-                                        <input type="text" id="clCardNo" placeholder="Card number / tag" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-sm text-slate-100 focus:outline-none focus:border-sky-500">
+                                        <label class="block text-xs font-semibold text-slate-300 mb-1">Card No.</label>
+                                        <div id="clCardNoDisplay" class="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-sm font-mono text-slate-300 truncate"></div>
                                     </div>
                                 </div>
                                 <div>
                                     <label class="block text-xs font-semibold text-slate-300 mb-1">Amount Loaded (GH₵)</label>
                                     <input type="number" id="clAmount" min="0.01" step="0.01" placeholder="e.g. 50000" required class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-sm text-slate-100 focus:outline-none focus:border-sky-500">
-                                    <p class="text-[11px] text-slate-500 mt-1">The card balance is kept in cedis. Each fuel issue deducts litres &times; rate.</p>
+                                </div>
+                                <div>
+                                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                        <div>
+                                            <label class="block text-xs font-semibold text-slate-300 mb-1">Diesel Rate (GH₵/L)</label>
+                                            <input type="number" id="clRateDiesel" min="0.0001" step="0.0001" placeholder="e.g. 14.50" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-sm text-slate-100 focus:outline-none focus:border-sky-500">
+                                        </div>
+                                        <div>
+                                            <label class="block text-xs font-semibold text-slate-300 mb-1">Petrol Rate (GH₵/L)</label>
+                                            <input type="number" id="clRatePetrol" min="0.0001" step="0.0001" placeholder="e.g. 13.90" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-sm text-slate-100 focus:outline-none focus:border-sky-500">
+                                        </div>
+                                    </div>
                                 </div>
                                 <div>
                                     <label class="block text-xs font-semibold text-slate-300 mb-1">Loaded By (Officer Name)</label>
@@ -637,7 +856,6 @@
                                 <button type="submit" class="w-full py-2.5 px-4 bg-teal-600 hover:bg-teal-500 text-white font-semibold rounded-xl shadow-lg shadow-teal-600/20 transition flex items-center justify-center gap-2">
                                     <i class="fa-solid fa-clipboard-check"></i> Review &amp; Approve Card Load
                                 </button>
-                                <p class="text-[11px] text-slate-500 text-center">Nothing is saved until the load is approved in the next step.</p>
                             </form>
                         </div>
 
@@ -706,7 +924,6 @@
                     <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                         <div>
                             <h3 class="font-bold text-white text-lg">Fleet &amp; Gen Set Registry</h3>
-                            <p class="text-xs text-slate-400">Manage onboarded trucks and gen sets, fleet groups (e.g. TOTAL, GOIL, BOST, OFFICE CARS), drivers/operators and fuel capacities. Use Bulk Import to add or update many at once.</p>
                         </div>
                         <div class="flex items-center space-x-3 w-full sm:w-auto">
                             <input type="text" id="fleetSearchInput" onkeyup="filterFleetList()" placeholder="Search ID, driver, gen set..." class="bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-sm text-slate-200 focus:outline-none focus:border-sky-500 w-full sm:w-64">
@@ -879,7 +1096,6 @@
 
                     <div class="bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-xl">
                         <h3 class="font-bold text-white text-base mb-1">Consumption by Fleet Group</h3>
-                        <p class="text-xs text-slate-400 mb-3">Totals per group (e.g. TOTAL, GOIL, BOST, OFFICE CARS) for the selected period and filters. Click a group to filter the report to it. Amount = rate × quantity (issues without a recorded rate are not priced).</p>
                         <div class="overflow-x-auto custom-scrollbar">
                             <table class="w-full text-left text-sm text-slate-300">
                                 <thead class="bg-slate-950 text-xs font-semibold text-slate-400 uppercase tracking-wider border-b border-slate-800">
@@ -904,7 +1120,6 @@
 
                     <div class="bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-xl">
                         <h3 class="font-bold text-white text-base mb-1">Consumption by Vehicle</h3>
-                        <p class="text-xs text-slate-400 mb-3">Click a vehicle to filter the report to it. Efficiency assumes the tank is filled to full at each dispensing; distance is measured between consecutive odometer readings.</p>
                         <div class="overflow-x-auto custom-scrollbar">
                             <table class="w-full text-left text-sm text-slate-300">
                                 <thead class="bg-slate-950 text-xs font-semibold text-slate-400 uppercase tracking-wider border-b border-slate-800">
@@ -943,13 +1158,11 @@
                                     <tbody id="rptStockTable" class="divide-y divide-slate-800"></tbody>
                                 </table>
                             </div>
-                            <p class="text-[11px] text-slate-500 mt-2">Stock movement covers all vehicles in the period, regardless of the vehicle filter.</p>
                         </div>
                     </div>
 
                     <div class="bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-xl">
                         <h3 class="font-bold text-white text-base mb-1">Consumption by Route vs Allowance</h3>
-                        <p class="text-xs text-slate-400 mb-3">Average liters issued per trip compared with the standard allowance for the route.</p>
                         <div class="overflow-x-auto custom-scrollbar">
                             <table class="w-full text-left text-sm text-slate-300">
                                 <thead class="bg-slate-950 text-xs font-semibold text-slate-400 uppercase tracking-wider border-b border-slate-800">
@@ -1037,13 +1250,11 @@
                                         <tbody id="rrCoverTable" class="divide-y divide-slate-800"></tbody>
                                     </table>
                                 </div>
-                                <p class="text-[11px] text-slate-500 mt-2">Opening, received and issued cover all vehicles for the period. Tank figures are as of today.</p>
                             </div>
                         </div>
 
                         <div class="bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-xl">
                             <h3 class="font-bold text-white text-base mb-1">Receipts by Supplier</h3>
-                            <p class="text-xs text-slate-400 mb-3">Click a supplier to filter the report to it.</p>
                             <div class="overflow-x-auto custom-scrollbar">
                                 <table class="w-full text-left text-sm text-slate-300">
                                     <thead class="bg-slate-950 text-xs font-semibold text-slate-400 uppercase tracking-wider border-b border-slate-800">
@@ -1092,7 +1303,6 @@
                                 <h3 class="font-bold text-white text-base flex items-center gap-2">
                                     <i class="fa-solid fa-scale-balanced text-emerald-400"></i> Stock vs Issues Balancing Ledger
                                 </h3>
-                                <p class="text-xs text-slate-400">Formula: Opening Stock + Total Received - Total Issued = Calculated Closing Balance</p>
                             </div>
                         </div>
 
@@ -1182,10 +1392,15 @@
 
                 <!-- TAB 7: SETTINGS & THRESHOLDS -->
                 <section id="tab-settings" class="hidden space-y-6">
+                    <div class="max-w-3xl mx-auto bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl space-y-4">
+                        <div><h3 class="font-bold text-white text-lg">Active Fuel Types</h3>
+                        </div>
+                        <div id="fuelToggleSettings" class="grid grid-cols-1 sm:grid-cols-2 gap-3"></div>
+                    </div>
+
                     <div class="max-w-3xl mx-auto bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl space-y-6">
                         <div>
                             <h3 class="font-bold text-white text-lg">Alert Threshold Settings</h3>
-                            <p class="text-xs text-slate-400">Configure safety reserves and low stock alert trigger points.</p>
                         </div>
 
                         <form id="settingsForm" onsubmit="handleSettingsSave(event)" class="space-y-5 border-t border-slate-800 pt-5">
@@ -1204,7 +1419,6 @@
                                     <div>
                                         <label class="block text-xs text-slate-400 mb-1">Opening Stock (Liters)</label>
                                         <input type="number" id="cfgDieselOpening" min="0" step="0.1" required class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white">
-                                        <p class="text-[10px] text-slate-500 mt-1">Stock in the tank before you start recording. Changing it adjusts current stock by the same difference.</p>
                                     </div>
                                 </div>
 
@@ -1222,14 +1436,12 @@
                                     <div>
                                         <label class="block text-xs text-slate-400 mb-1">Opening Stock (Liters)</label>
                                         <input type="number" id="cfgPetrolOpening" min="0" step="0.1" required class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white">
-                                        <p class="text-[10px] text-slate-500 mt-1">Stock in the tank before you start recording. Changing it adjusts current stock by the same difference.</p>
                                     </div>
                                 </div>
 
                                 <!-- Fuel Card Thresholds -->
                                 <div class="md:col-span-2 bg-slate-950 border border-slate-800 p-4 rounded-xl space-y-3">
                                     <h4 class="font-bold text-slate-200 text-sm"><i class="fa-solid fa-credit-card text-teal-300 mr-1"></i> Fuel Card Low-Balance Alerts (GH₵)</h4>
-                                    <p class="text-[10px] text-slate-500">When a card's balance falls to this amount or below, users are warned to restock. Leave blank or 0 for no alert.</p>
                                     <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
                                         <div><label class="block text-xs text-slate-400 mb-1">Kumasi card</label><input type="number" id="cfgCardThr_Kumasi" min="0" step="0.01" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white"></div>
                                         <div><label class="block text-xs text-slate-400 mb-1">Buipe card</label><input type="number" id="cfgCardThr_Buipe" min="0" step="0.01" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white"></div>
@@ -1249,7 +1461,7 @@
                     <div class="max-w-3xl mx-auto bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl space-y-4">
                         <div>
                             <h3 class="font-bold text-white text-lg">Delivery Approval PIN</h3>
-                            <p class="text-xs text-slate-400">When a PIN is set, it is required in step 2 before a stock delivery is recorded and before received records are cleared. <span id="pinStatus" class="font-semibold"></span></p>
+                            <p class="text-xs"><span id="pinStatus" class="font-semibold"></span></p>
                         </div>
                         <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
                             <div id="pinCurrentWrap" class="hidden"><label class="block text-xs text-slate-400 mb-1">Current PIN</label><input type="password" id="pinCurrent" inputmode="numeric" autocomplete="off" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-sm text-slate-100 focus:outline-none focus:border-sky-500"></div>
@@ -1260,13 +1472,28 @@
                             <button type="button" id="pinRemoveBtn" onclick="removeApprovalPin()" class="hidden px-4 py-2 text-xs font-semibold bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-lg border border-slate-700">Remove PIN</button>
                             <button type="button" onclick="saveApprovalPin()" class="px-4 py-2 text-xs font-semibold bg-sky-600 hover:bg-sky-500 text-white rounded-lg">Save PIN</button>
                         </div>
-                        <p class="text-[11px] text-slate-500">This is a deterrent against accidental or casual entries. The app runs entirely in this browser, so it is not a substitute for real access control.</p>
+                    </div>
+
+                    <div id="tlCard" class="max-w-3xl mx-auto bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl space-y-4">
+                        <div>
+                            <h3 class="font-bold text-white text-lg"><i class="fa-solid fa-lock text-amber-400 mr-2"></i>Tab Lock (Access PIN)</h3>
+                            <p class="text-xs"><span id="tlStatus" class="font-semibold"></span></p>
+                        </div>
+                        <div id="tlTabList" class="grid grid-cols-1 sm:grid-cols-2 gap-2"></div>
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+                            <div id="tlCurWrap" class="hidden"><label class="block text-xs text-slate-400 mb-1">Current access PIN</label><input type="password" id="tlCur" inputmode="numeric" autocomplete="off" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-sm text-slate-100 focus:outline-none focus:border-sky-500"></div>
+                            <div><label class="block text-xs text-slate-400 mb-1"><span id="tlNewLbl">Access PIN (4–8 digits)</span></label><input type="password" id="tlNew" inputmode="numeric" maxlength="8" autocomplete="off" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-sm text-slate-100 focus:outline-none focus:border-sky-500"></div>
+                            <div><label class="block text-xs text-slate-400 mb-1">Repeat access PIN</label><input type="password" id="tlNew2" inputmode="numeric" maxlength="8" autocomplete="off" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-sm text-slate-100 focus:outline-none focus:border-sky-500"></div>
+                        </div>
+                        <div class="flex flex-wrap gap-2 justify-end">
+                            <button type="button" id="tlRemoveBtn" onclick="tlRemoveAll()" class="hidden px-4 py-2 text-xs font-semibold bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-lg border border-slate-700">Remove all locks &amp; PIN</button>
+                            <button type="button" onclick="tlSave()" class="px-4 py-2 text-xs font-semibold bg-sky-600 hover:bg-sky-500 text-white rounded-lg">Save tab locks</button>
+                        </div>
                     </div>
 
                     <div class="max-w-3xl mx-auto bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl space-y-4">
                         <div>
                             <h3 class="font-bold text-white text-lg"><i class="fa-brands fa-google-drive text-emerald-400 mr-2"></i>Google Sheets connection</h3>
-                            <p class="text-xs text-slate-400">Store all records in your own Google Sheet so every computer and user sees the same data. Paste the Web app URL from the Apps Script deployment.</p>
                         </div>
                         <div class="space-y-3">
                             <input id="sheetsUrl" type="url" placeholder="https://script.google.com/macros/s/.../exec" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-sky-500">
@@ -1279,13 +1506,11 @@
                             <button type="button" onclick="Sheets.disconnect()" class="px-4 py-2 text-xs font-semibold bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-lg border border-slate-700">Disconnect</button>
                         </div>
                         <p id="sheetsStatusText" class="text-xs text-slate-400">Not connected.</p>
-                        <p class="text-[11px] text-slate-500">Make changes in the app, not in the sheet: the sheet's readable columns are a view and are rewritten on every save.</p>
                     </div>
 
                     <div class="max-w-3xl mx-auto bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl space-y-4">
                         <div>
                             <h3 class="font-bold text-white text-lg">Backup &amp; Restore</h3>
-                            <p class="text-xs text-slate-400">Data is kept in this browser and, when Google Sheets is connected, in your sheet too. A downloaded backup is still a good extra safety copy.</p>
                         </div>
                         <div class="flex flex-wrap gap-2">
                             <button type="button" onclick="exportBackup()" class="px-4 py-2 text-xs font-semibold bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg"><i class="fa-solid fa-download mr-1"></i> Download full backup (.json)</button>
@@ -1358,7 +1583,6 @@
             </button>
             <div class="mb-4 pr-8">
                 <h3 class="font-bold text-white text-lg">Bulk Onboard / Update Vehicles &amp; Gen Sets</h3>
-                <p class="text-xs text-slate-400">Upload your truck list as an <strong>Excel file (.xlsx)</strong> laid out in groups (an <em>ITEM</em> row with the group name, then the numbered plates beneath it), or a CSV, or paste rows from Excel. Flat tables can use the columns: Group, Category, ID, Type / Model, Fuel Type, Driver / Operator, Tank Capacity (L).</p>
             </div>
             <div class="overflow-y-auto custom-scrollbar flex-1 space-y-4 pr-1">
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -1444,7 +1668,6 @@
                 <div>
                     <label id="editLblId" class="block text-xs font-semibold text-slate-300 mb-1">Registration / Truck ID</label>
                     <input type="text" id="editId" required class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-sm text-slate-100 focus:outline-none focus:border-sky-500">
-                    <p class="text-[10px] text-slate-500 mt-1">If you change the ID, all its past fuel records are updated to the new ID.</p>
                 </div>
                 <div>
                     <label id="editLblType" class="block text-xs font-semibold text-slate-300 mb-1">Vehicle Type / Model</label>
@@ -1574,15 +1797,38 @@
                 <button type="button" onclick="closeCardThreshold()" class="text-slate-400 hover:text-white"><i class="fa-solid fa-xmark"></i></button>
             </div>
             <form onsubmit="saveCardThreshold(event)" class="p-5 space-y-4">
-                <p class="text-xs text-slate-400">When the card balance falls to this amount or below, users get a warning banner and a notification to restock the card.</p>
                 <div>
                     <label class="block text-xs font-semibold text-slate-300 mb-1">Alert when balance is at or below (GH₵)</label>
                     <input type="number" id="cthAmount" min="0" step="0.01" placeholder="e.g. 5000" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-sm text-slate-100 focus:outline-none focus:border-sky-500">
-                    <p class="text-[11px] text-slate-500 mt-1">Leave blank or 0 to switch the alert off for this card.</p>
                 </div>
                 <div class="flex justify-between gap-2 pt-1">
                     <button type="button" onclick="closeCardThreshold()" class="px-4 py-2 text-sm bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-xl border border-slate-700">Cancel</button>
                     <button type="submit" class="px-5 py-2 text-sm font-semibold bg-amber-600 hover:bg-amber-500 text-white rounded-xl"><i class="fa-solid fa-bell mr-1"></i> Save alert</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- MODAL: CARD NUMBER (set once) -->
+    <div id="cardNumberModal" class="hidden fixed inset-0 z-[60] bg-slate-950/85 backdrop-blur-sm flex items-center justify-center p-4">
+        <div class="bg-slate-900 border border-slate-700 rounded-2xl shadow-2xl w-full max-w-md">
+            <div class="p-5 border-b border-slate-800 flex items-start justify-between gap-3">
+                <h3 class="font-bold text-white text-lg" id="cnrTitle">Card number</h3>
+                <button type="button" onclick="closeCardNumber()" class="text-slate-400 hover:text-white"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <form onsubmit="saveCardNumber(event)" class="p-5 space-y-4">
+                <p class="text-xs text-slate-400" id="cnrNote"></p>
+                <div>
+                    <label class="block text-xs font-semibold text-slate-300 mb-1">Card number</label>
+                    <input type="text" id="cnrNo" required autocomplete="off" placeholder="Full card number / tag" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-sm font-mono text-slate-100 focus:outline-none focus:border-sky-500">
+                </div>
+                <div id="cnrPinWrap" class="hidden">
+                    <label class="block text-xs font-semibold text-slate-300 mb-1">Approval PIN</label>
+                    <input type="password" id="cnrPin" inputmode="numeric" autocomplete="off" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-sm text-slate-100 focus:outline-none focus:border-sky-500">
+                </div>
+                <div class="flex justify-between gap-2 pt-1">
+                    <button type="button" onclick="closeCardNumber()" class="px-4 py-2 text-sm bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-xl border border-slate-700">Cancel</button>
+                    <button type="submit" class="px-5 py-2 text-sm font-semibold bg-teal-600 hover:bg-teal-500 text-white rounded-xl"><i class="fa-solid fa-lock mr-1"></i> Save card number</button>
                 </div>
             </form>
         </div>
@@ -1718,6 +1964,57 @@
         </div>
     </div>
 
+    <!-- MODAL: CLEAR FUEL PURCHASE LEDGER RECORDS -->
+    <div id="fpClearModal" class="hidden fixed inset-0 z-[60] bg-slate-950/85 backdrop-blur-sm flex items-center justify-center p-4">
+        <div class="bg-slate-900 border border-rose-500/40 rounded-2xl shadow-2xl w-full max-w-md p-5 space-y-4">
+            <div class="flex items-start justify-between gap-3">
+                <h3 class="font-bold text-white text-lg flex items-center gap-2"><i class="fa-solid fa-triangle-exclamation text-rose-400"></i> Clear fuel purchase records</h3>
+                <button type="button" onclick="fpCloseClear()" class="text-slate-400 hover:text-white"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <div>
+                <label class="block text-xs font-semibold text-slate-300 mb-1">Which records?</label>
+                <select id="fpClrScope" onchange="fpRenderClearSummary()" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-sm text-slate-100 focus:outline-none focus:border-sky-500"></select>
+            </div>
+            <div id="fpClrSummary" class="text-sm text-slate-300 space-y-2"></div>
+            <label class="flex items-start gap-2 text-xs text-slate-300 cursor-pointer">
+                <input type="checkbox" id="fpClrBackup" checked class="mt-0.5 accent-emerald-500">
+                <span>Download a CSV copy of these records first (recommended)</span>
+            </label>
+            <div>
+                <label class="block text-xs font-semibold text-slate-300 mb-1">Type <span class="font-mono text-rose-300">CLEAR</span> to confirm</label>
+                <input type="text" id="fpClrWord" oninput="fpValidateClear()" autocomplete="off" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-sm text-slate-100 focus:outline-none focus:border-sky-500">
+            </div>
+            <div id="fpClrPinWrap" class="hidden">
+                <label class="block text-xs font-semibold text-slate-300 mb-1">Approval PIN</label>
+                <input type="password" id="fpClrPin" oninput="fpValidateClear()" inputmode="numeric" autocomplete="off" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-sm text-slate-100 focus:outline-none focus:border-sky-500">
+                <p id="fpClrPinNote" class="hidden text-[11px] text-rose-400 mt-1"></p>
+            </div>
+            <div class="flex justify-end gap-2">
+                <button type="button" onclick="fpCloseClear()" class="px-4 py-2 text-sm bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-xl border border-slate-700">Cancel</button>
+                <button type="button" id="fpClrBtn" onclick="fpClearRecords()" disabled class="px-5 py-2 text-sm font-semibold bg-rose-600 hover:bg-rose-500 disabled:bg-slate-800 disabled:text-slate-500 disabled:cursor-not-allowed text-white rounded-xl">Clear records</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL: TAB UNLOCK (access PIN) -->
+    <div id="tlPinModal" class="hidden fixed inset-0 z-[70] bg-slate-950 flex items-center justify-center p-4">
+        <div class="bg-slate-900 border border-slate-700 rounded-2xl shadow-2xl w-full max-w-sm p-6 space-y-4">
+            <div class="text-center">
+                <div class="mx-auto h-12 w-12 rounded-full bg-amber-500/10 border border-amber-500/30 flex items-center justify-center mb-3"><i class="fa-solid fa-lock text-amber-400 text-lg"></i></div>
+                <h3 id="tlPinTitle" class="font-bold text-white text-lg">This tab is locked</h3>
+                <p id="tlPinNote" class="text-xs text-slate-400 mt-1">Enter the access PIN to continue.</p>
+            </div>
+            <div>
+                <input type="password" id="tlPinInput" inputmode="numeric" maxlength="8" autocomplete="off" placeholder="Access PIN" onkeydown="if(event.key==='Enter'){event.preventDefault();tlSubmitPin();}" class="w-full text-center tracking-[0.4em] bg-slate-950 border border-slate-700 rounded-xl px-3 py-2.5 text-base text-slate-100 focus:outline-none focus:border-sky-500">
+                <p id="tlPinErr" class="hidden text-[11px] text-rose-400 mt-1 text-center"></p>
+            </div>
+            <div class="flex justify-end gap-2">
+                <button type="button" id="tlPinCancel" onclick="tlCancelPin()" class="px-4 py-2 text-sm bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-xl border border-slate-700">Cancel</button>
+                <button type="button" onclick="tlSubmitPin()" class="px-5 py-2 text-sm font-semibold bg-sky-600 hover:bg-sky-500 text-white rounded-xl">Unlock</button>
+            </div>
+        </div>
+    </div>
+
     <!-- ALERT NOTIFICATION POPOVER -->
     <div id="alertPopover" class="hidden fixed top-16 right-3 sm:right-6 left-3 sm:left-auto z-50 sm:w-80 bg-slate-900 border border-slate-800 rounded-2xl shadow-2xl p-4">
         <div class="flex justify-between items-center border-b border-slate-800 pb-2 mb-3">
@@ -1745,9 +2042,12 @@
                 issueLogs: [],
                 cardLoads: [],
                 cardThresholds: {},
+                cardNumbers: {},   // permanent card number per base (set once)
+                cardRates: {},     // current fuel rate per base and fuel (GH₵/L), separate from the main tank price
                 settings: { approvalPinHash: '' },
                 trucks: [],
-                destinations: []
+                destinations: [],
+                fuelPurchases: { suppliers: [], entries: [] }   // supplier accounts (credit terms) + purchase ledger
             };
         }
         let currentTab = 'dashboard';
@@ -1755,6 +2055,7 @@
         const MAIN_BASE = 'Main Base';
         const CARD_BASES = ['Kumasi', 'Buipe', 'Takoradi'];
         const FUELS = ['Diesel', 'Petrol'];
+        let lastIssSrc = null;
         function issueSource(l) { return (l && l.source && l.source !== MAIN_BASE) ? l.source : MAIN_BASE; }
         // Issues drawn from the main tank only (used for every tank / stock calculation).
         function mainIssues() { return appState.issueLogs.filter(l => issueSource(l) === MAIN_BASE); }
@@ -1774,17 +2075,21 @@
             const r = issueRate(l);
             return r === null ? 0 : r2(Number(l.quantity) * r);
         }
-        // Suggested rate for the issue form: last rate used at that base, else the latest delivery price (main tank)
+        // Suggested rate for the issue form.
+        // Fuel cards use their own rate (set when the card is loaded), never the main tank price.
+        // Main Base uses the last Main Base issue rate, else the latest delivery price.
         function suggestedRate(src, fuel) {
             const newest = (a, b) => String(b.date).localeCompare(String(a.date));
-            const withRate = appState.issueLogs.filter(l => l.fuelType === fuel && issueRate(l) !== null);
             if (src !== MAIN_BASE) {
-                const same = withRate.filter(l => issueSource(l) === src).sort(newest)[0];
-                if (same) return issueRate(same);
+                const cr = cardRate(src, fuel);
+                if (cr !== null) return cr;
+                const same = appState.issueLogs.filter(l => issueSource(l) === src && l.fuelType === fuel && issueRate(l) !== null).sort(newest)[0];
+                return same ? issueRate(same) : null;
             }
+            const mainWithRate = mainIssues().filter(l => l.fuelType === fuel && issueRate(l) !== null);
             const rc = appState.receiveLogs.filter(l => l.fuelType === fuel && hasVal(l.unitPrice)).sort(newest)[0];
             if (rc) return Number(rc.unitPrice);
-            const any = withRate.sort(newest)[0];
+            const any = mainWithRate.sort(newest)[0];
             return any ? issueRate(any) : null;
         }
         const r3 = x => Math.round(x * 1000) / 1000;
@@ -1811,6 +2116,8 @@
             setReportPreset('month');
             setRcvPreset('month');
             renderAll();
+            updateCardLoadFormInfo();
+            if (typeof tlOnLoad === 'function') tlOnLoad();
             if (window.Sheets) Sheets.init();
         };
 
@@ -1835,7 +2142,8 @@
         }
 
         function clearAllData() {
-            if (!confirm('This permanently deletes ALL vehicles, routes, deliveries and dispensing records, and resets stock to zero. Continue?')) return;
+            if (typeof tlGuard === 'function' && tlGuard(clearAllData)) return;   // access PIN needed when a tab-lock PIN is set
+            if (!confirm('This permanently deletes ALL vehicles, routes, deliveries, dispensing records and supplier purchase ledgers, and resets stock to zero. Continue?')) return;
             appState = emptyState();
             saveState();
             showNotification('All data cleared. You can start entering real records.');
@@ -1870,9 +2178,10 @@
 
         // Navigation Switcher
         function switchTab(tabId) {
+            if (typeof tlGate === 'function' && tlGate(tabId)) return;   // tab is locked: ask for the access PIN first
             currentTab = tabId;
             if (typeof closeSidebar === 'function') closeSidebar();
-            const tabs = ['dashboard', 'receive', 'issue', 'cards', 'fleet', 'destinations', 'reports', 'reconciliation', 'settings'];
+            const tabs = ['dashboard', 'receive', 'purchases', 'issue', 'cards', 'fleet', 'destinations', 'reports', 'reconciliation', 'settings'];
             tabs.forEach(t => {
                 const el = document.getElementById(`tab-${t}`);
                 const nav = document.getElementById(`nav-${t}`);
@@ -1891,6 +2200,7 @@
             const titles = {
                 dashboard: 'Dashboard Overview',
                 receive: 'Receive Fuel Stock',
+                purchases: 'Fuel Purchases & Supplier Credit',
                 issue: 'Dispense & Issue Fuel',
                 cards: 'Fuel Cards (Kumasi, Buipe, Takoradi)',
                 fleet: 'Fleet Vehicle Management',
@@ -1901,6 +2211,7 @@
             };
             document.getElementById('pageTitle').innerText = titles[tabId] || 'Fuel Management';
             if (tabId === 'receive') toggleReceiveForm(false);
+            if (tabId === 'purchases' && typeof renderPurchases === 'function') renderPurchases();
             if (tabId === 'issue') toggleIssueForm(false);
 
             // Trigger canvas charts refresh when visible
@@ -1925,6 +2236,70 @@
             renderAlerts();
             renderDashboardChart();
             renderReports();
+            if (typeof renderPurchases === 'function') renderPurchases();
+        }
+
+
+        // ===== Active fuel types =====
+        function activeFuels() {
+            const a = (appState.settings && appState.settings.activeFuels) || {};
+            const d = a.Diesel !== false, p = a.Petrol !== false;
+            return (!d && !p) ? { Diesel: true, Petrol: true } : { Diesel: d, Petrol: p };
+        }
+        function isFuelActive(f) { return !!activeFuels()[f]; }
+        function fuelOk(l) { return !l || !l.fuelType || isFuelActive(l.fuelType); }
+        function toggleFuel(f) {
+            const cur = activeFuels();
+            const next = { ...cur, [f]: !cur[f] };
+            if (!next.Diesel && !next.Petrol) { showNotification('At least one fuel type must stay active.', 'error'); return; }
+            appState.settings = { ...(appState.settings || {}), activeFuels: next };
+            saveState();
+            renderAll();
+        }
+        function fuelSwitchHtml(f, big) {
+            const on = isFuelActive(f), col = f === 'Diesel' ? 'amber' : 'sky';
+            if (big) return `<button type="button" onclick="toggleFuel('${f}')" class="flex items-center justify-between p-4 rounded-xl border ${on ? 'border-' + col + '-500/40 bg-' + col + '-500/10' : 'border-slate-700 bg-slate-950'} transition">
+                <span class="text-left"><span class="block text-sm font-semibold text-slate-100">${f} ${f === 'Diesel' ? '(AGO)' : '(PMS)'}</span><span class="block text-[11px] ${on ? 'text-emerald-400' : 'text-slate-500'}">${on ? 'Active' : 'Inactive'}</span></span>
+                <span class="relative inline-block h-6 w-11 rounded-full ${on ? 'bg-emerald-500' : 'bg-slate-700'}"><span class="absolute top-0.5 ${on ? 'left-[22px]' : 'left-0.5'} h-5 w-5 rounded-full bg-white transition-all"></span></span></button>`;
+            return `<button type="button" onclick="toggleFuel('${f}')" class="px-3 py-1.5 text-xs font-semibold rounded-lg border transition ${on ? 'bg-' + col + '-500/15 border-' + col + '-500/40 text-' + col + '-300' : 'bg-slate-900 border-slate-700 text-slate-500 line-through'}">${f}</button>`;
+        }
+        function applyFuelVisibility() {
+            const act = activeFuels();
+            ['Diesel', 'Petrol'].forEach(f => {
+                const c = document.getElementById(f.toLowerCase() + 'TankCard');
+                if (c) c.classList.toggle('hidden', !act[f]);
+            });
+            const grid = document.getElementById('dashTankGrid');
+            if (grid) grid.className = 'grid grid-cols-1 gap-4' + (act.Diesel && act.Petrol ? ' md:grid-cols-2' : '');
+            const d = document.getElementById('fuelToggleDash'); if (d) d.innerHTML = ['Diesel', 'Petrol'].map(f => fuelSwitchHtml(f, false)).join('');
+            const st = document.getElementById('fuelToggleSettings'); if (st) st.innerHTML = ['Diesel', 'Petrol'].map(f => fuelSwitchHtml(f, true)).join('');
+            ['rcvFuelType', 'trkFuelType', 'editFuelType', 'rcvFilterFuel', 'rptFuel', 'rrFuel'].forEach(id => {
+                const sel = document.getElementById(id); if (!sel) return;
+                Array.from(sel.options).forEach(o => {
+                    if (o.value !== 'Diesel' && o.value !== 'Petrol') return;
+                    const off = !act[o.value]; o.hidden = off; o.disabled = off;
+                });
+                if (sel.selectedOptions[0] && sel.selectedOptions[0].disabled) {
+                    const ok = Array.from(sel.options).find(o => !o.disabled); if (ok) sel.value = ok.value;
+                }
+            });
+        }
+
+        function dashCardHtml(base) {
+            const s = cardStats(base), st = cardStatus(base), act = activeFuels();
+            const hasThr = st.thr > 0, isLow = st.state === 'low' || (st.state === 'empty' && hasThr);
+            const pct = hasThr ? Math.min(100, Math.max(0, (st.bal / (st.thr * 2)) * 100)) : 0;
+            const bar = isLow ? 'bg-rose-500' : (st.bal <= st.thr * 1.25 ? 'bg-amber-500' : 'bg-teal-500');
+            const lit = ['Diesel', 'Petrol'].filter(f => act[f]).map(f => `<span><span class="inline-block h-2 w-2 rounded-full ${f === 'Diesel' ? 'bg-amber-500' : 'bg-sky-500'} mr-1"></span>${f} ${fmt(s.litres[f])} L</span>`).join('');
+            return `<div class="bg-slate-900 border ${isLow ? 'border-rose-500/50' : 'border-slate-800'} rounded-2xl p-4">
+                <div class="flex items-center justify-between"><h4 class="font-semibold text-slate-100 text-sm">${esc(base)}</h4>
+                ${isLow ? '<span class="text-[10px] font-semibold uppercase px-2 py-0.5 rounded-full bg-rose-500/15 text-rose-300 border border-rose-500/30">Restock</span>' : (hasThr ? '<span class="text-[10px] font-semibold uppercase px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-300 border border-emerald-500/20">OK</span>' : '')}</div>
+                <div class="mt-2 text-2xl font-bold ${s.balance < 0 ? 'text-rose-400' : 'text-white'}">${money(s.balance)}</div>
+                <div class="mt-3 h-1.5 w-full bg-slate-800 rounded-full overflow-hidden"><div class="h-full ${bar} rounded-full" style="width:${hasThr ? pct.toFixed(1) : 0}%"></div></div>
+                <p class="mt-1.5 text-[11px] text-slate-500">${hasThr ? 'Alert at ' + money(st.thr) : 'No alert set'}</p>
+                <div class="mt-3 pt-3 border-t border-slate-800 flex flex-wrap gap-x-4 gap-y-1 text-[11px] text-slate-400">${lit}</div>
+                <div class="mt-1 text-[11px] text-slate-500">Loaded ${money(s.loaded)} · Spent ${money(s.issued)}</div>
+            </div>`;
         }
 
         // 1. Dashboard & Gauges Render
@@ -1970,22 +2345,24 @@
             const todayStr = localDateStr();
             
             const rcvToday = appState.receiveLogs
-                .filter(l => l.date.startsWith(todayStr))
+                .filter(l => fuelOk(l) && l.date.startsWith(todayStr))
                 .reduce((acc, l) => acc + Number(l.quantity), 0);
 
             const issToday = mainIssues()
-                .filter(l => l.date.startsWith(todayStr))
+                .filter(l => fuelOk(l) && l.date.startsWith(todayStr))
                 .reduce((acc, l) => acc + Number(l.quantity), 0);
 
-            document.getElementById('kpiTotalStock').innerText = (diesel.current + petrol.current).toLocaleString() + ' L';
+            const _act = activeFuels();
+            document.getElementById('kpiTotalStock').innerText = ((_act.Diesel ? diesel.current : 0) + (_act.Petrol ? petrol.current : 0)).toLocaleString() + ' L';
+            applyFuelVisibility();
             document.getElementById('kpiReceivedToday').innerText = rcvToday.toLocaleString() + ' L';
             document.getElementById('kpiIssuedToday').innerText = issToday.toLocaleString() + ' L';
 
             // Activity Log Stream
             const stream = document.getElementById('recentActivityStream');
             const combinedLogs = [
-                ...appState.receiveLogs.map(l => ({ ...l, actionType: 'Receive' })),
-                ...appState.issueLogs.map(l => ({ ...l, actionType: 'Issue' })),
+                ...appState.receiveLogs.filter(fuelOk).map(l => ({ ...l, actionType: 'Receive' })),
+                ...appState.issueLogs.filter(fuelOk).map(l => ({ ...l, actionType: 'Issue' })),
                 ...cardLoads().map(l => ({ ...l, actionType: 'CardLoad' }))
             ].sort((a, b) => new Date(b.date) - new Date(a.date)).slice(0, 7);
 
@@ -2066,7 +2443,7 @@
             if (!(quantity > 0)) { showNotification('Enter a quantity greater than zero.', 'error'); return; }
             if (unitPrice !== null && !(unitPrice >= 0)) { showNotification('Unit price must be zero or more.', 'error'); return; }
             pendingReceive = {
-                date: g('rcvDate'), fuelType: g('rcvFuelType'), supplier: g('rcvSupplier'), quantity, waybill: g('rcvWaybill'),
+                date: g('rcvDate'), fuelType: g('rcvFuelType'), supplier: g('rcvSupplier'), quantity, waybill: g('rcvWaybill'), invoiceDate: g('rcvInvoiceDate'),
                 officer: g('rcvOfficer'), vehicleNo: g('rcvVehicle'), driver: g('rcvDriver'), unitPrice, remarks: g('rcvRemarks')
             };
             openReceiveConfirm();
@@ -2095,6 +2472,7 @@
                 ${rcRow('Quantity', `<span class="text-emerald-400 font-bold text-base">+${fmt(p.quantity, 2)} L</span>`)}
                 ${rcRow('Supplier / depot', esc(p.supplier))}
                 ${rcRow('Waybill / invoice #', `<span class="font-mono">${esc(p.waybill)}</span>`)}
+                ${rcRow('Invoice date', esc(formatInvoiceDate(p.invoiceDate)))}
                 ${rcRow('Receiving officer', esc(p.officer))}
                 ${p.vehicleNo ? rcRow('Delivery truck', esc(p.vehicleNo)) : ''}
                 ${p.driver ? rcRow('Driver', esc(p.driver)) : ''}
@@ -2159,7 +2537,7 @@
 
             const newLog = {
                 id: 'RCV-' + Date.now().toString(36).toUpperCase(),
-                date: p.date, fuelType: p.fuelType, quantity: p.quantity, supplier: p.supplier, waybill: p.waybill, officer: p.officer,
+                date: p.date, fuelType: p.fuelType, quantity: p.quantity, supplier: p.supplier, waybill: p.waybill, invoiceDate: p.invoiceDate, officer: p.officer,
                 vehicleNo: p.vehicleNo, driver: p.driver, unitPrice: p.unitPrice, remarks: p.remarks,
                 approvedBy: document.getElementById('rcApprover').value.trim(), approvedAt: new Date().toISOString()
             };
@@ -2196,7 +2574,7 @@
                 return `
                 <tr class="hover:bg-slate-800/40 transition">
                     <td class="py-3 px-3 text-xs text-slate-300 font-medium">${esc(formatDate(l.date))}</td>
-                    <td class="py-3 px-3 font-mono text-xs text-sky-400">${esc(l.waybill)}</td>
+                    <td class="py-3 px-3 font-mono text-xs text-sky-400">${esc(l.waybill)}${l.invoiceDate ? `<div class="text-[10px] text-slate-500 font-sans">Inv. ${esc(formatInvoiceDate(l.invoiceDate))}</div>` : ''}</td>
                     <td class="py-3 px-3 text-slate-200">${esc(l.supplier)}${l.vehicleNo ? `<div class="text-[10px] text-slate-500">${esc(l.vehicleNo)}${l.driver ? ' · ' + esc(l.driver) : ''}</div>` : ''}</td>
                     <td class="py-3 px-3"><span class="px-2 py-0.5 text-[10px] font-semibold rounded ${l.fuelType === 'Diesel' ? 'bg-amber-500/10 text-amber-400 border border-amber-500/20' : 'bg-sky-500/10 text-sky-400 border border-sky-500/20'}">${esc(l.fuelType)}</span></td>
                     <td class="py-3 px-3 text-right font-bold text-emerald-400">+${Number(l.quantity).toLocaleString()}</td>
@@ -2216,7 +2594,7 @@
             w.document.write(`<!DOCTYPE html><html><head><title>GRN ${esc(l.id)}</title></head><body style="font-family:Arial,sans-serif;padding:30px;max-width:720px;margin:auto">
                 <h2 style="margin:0">Goods Received Note (Fuel)</h2><p style="margin:4px 0 18px;color:#555;font-size:13px">Ref: ${esc(l.id)}</p>
                 <table style="border-collapse:collapse;width:100%;font-size:14px">
-                ${row('Date &amp; time', esc(formatDate(l.date)))}${row('Supplier / depot', esc(l.supplier))}${row('Waybill / invoice #', esc(l.waybill))}
+                ${row('Date &amp; time', esc(formatDate(l.date)))}${row('Supplier / depot', esc(l.supplier))}${row('Waybill / invoice #', esc(l.waybill))}${row('Invoice date', esc(formatInvoiceDate(l.invoiceDate)))}
                 ${row('Fuel type', esc(l.fuelType))}${row('Quantity received', fmt(l.quantity, 2) + ' L')}
                 ${l.vehicleNo ? row('Delivery truck', esc(l.vehicleNo)) : ''}${l.driver ? row('Driver', esc(l.driver)) : ''}
                 ${c !== null ? row('Unit price', money(l.unitPrice) + ' / L') + row('Total cost', money(c)) : ''}
@@ -2235,9 +2613,9 @@
         function exportRcvRows(logs, name, withTotal) {
             const totQ = logs.reduce((a, l) => a + Number(l.quantity), 0), totC = logs.reduce((a, l) => a + (receiptCost(l) || 0), 0);
             downloadCsv(name, [
-                ['GRN Ref', 'Date', 'Waybill', 'Supplier', 'Fuel', 'Liters', 'Unit price (GHS/L)', 'Total cost (GHS)', 'Delivery truck', 'Driver', 'Received by', 'Approved by', 'Approved at', 'Remarks'],
-                ...logs.map(l => { const c = receiptCost(l); return [l.id, String(l.date).replace('T', ' '), l.waybill, l.supplier, l.fuelType, l.quantity, l.unitPrice ?? '', c === null ? '' : c.toFixed(2), l.vehicleNo || '', l.driver || '', l.officer, l.approvedBy || '', l.approvedAt || '', l.remarks || '']; }),
-                ...(withTotal ? [['TOTAL', '', '', '', '', totQ, '', totC.toFixed(2), '', '', '', '', '', '']] : [])
+                ['GRN Ref', 'Date', 'Waybill', 'Invoice date', 'Supplier', 'Fuel', 'Liters', 'Unit price (GHS/L)', 'Total cost (GHS)', 'Delivery truck', 'Driver', 'Received by', 'Approved by', 'Approved at', 'Remarks'],
+                ...logs.map(l => { const c = receiptCost(l); return [l.id, String(l.date).replace('T', ' '), l.waybill, l.invoiceDate || '', l.supplier, l.fuelType, l.quantity, l.unitPrice ?? '', c === null ? '' : c.toFixed(2), l.vehicleNo || '', l.driver || '', l.officer, l.approvedBy || '', l.approvedAt || '', l.remarks || '']; }),
+                ...(withTotal ? [['TOTAL', '', '', '', '', '', totQ, '', totC.toFixed(2), '', '', '', '', '', '']] : [])
             ]);
         }
 
@@ -2250,7 +2628,7 @@
             document.getElementById('clrSummary').innerHTML = `
                 <p>This permanently deletes <strong>${logs.length}</strong> delivery record(s): <strong>${fmt(tot('Diesel'))} L</strong> diesel and <strong>${fmt(tot('Petrol'))} L</strong> petrol. Those liters are also taken out of current tank stock.</p>
                 ${issued > 0 ? '<p class="text-amber-300 text-xs">Fuel issuing records are kept, so stock can show a low or negative balance until deliveries are recorded again.</p>' : ''}
-                <p class="text-xs text-slate-500">Opening stock, issuing records, vehicles and routes are not touched.</p>`;
+                `;
             document.getElementById('clrWord').value = '';
             document.getElementById('clrPin').value = '';
             document.getElementById('clrPinNote').classList.add('hidden');
@@ -2284,9 +2662,9 @@
         // Clear fuel card load records
         function exportCardLoadRows(logs, name) {
             downloadCsv(name, [
-                ['Ref', 'Date', 'Base', 'Load ref / receipt', 'Card no.', 'Supplier', 'Amount loaded (GHS)', 'Loaded by', 'Approved by', 'Approved at', 'Remarks'],
-                ...logs.map(l => [l.id, String(l.date).replace('T', ' '), l.base, l.ref, l.cardNo || '', l.supplier, loadAmount(l).toFixed(2), l.officer, l.approvedBy || '', l.approvedAt || '', l.remarks || '']),
-                ['TOTAL', '', '', '', '', '', logs.reduce((a, l) => a + loadAmount(l), 0).toFixed(2), '', '', '', '']
+                ['Ref', 'Date', 'Base', 'Load ref / receipt', 'Card no.', 'Supplier', 'Amount loaded (GHS)', 'Diesel rate (GHS/L)', 'Petrol rate (GHS/L)', 'Loaded by', 'Approved by', 'Approved at', 'Remarks'],
+                ...logs.map(l => [l.id, String(l.date).replace('T', ' '), l.base, l.ref, l.cardNo || '', l.supplier, loadAmount(l).toFixed(2), l.rateDiesel ?? '', l.ratePetrol ?? '', l.officer, l.approvedBy || '', l.approvedAt || '', l.remarks || '']),
+                ['TOTAL', '', '', '', '', '', logs.reduce((a, l) => a + loadAmount(l), 0).toFixed(2), '', '', '', '', '', '']
             ]);
         }
         function openClearCardLoads() {
@@ -2298,7 +2676,7 @@
             document.getElementById('cclSummary').innerHTML = `
                 <p>This permanently deletes <strong>${logs.length}</strong> card load record(s) totalling <strong>${money(total)}</strong>${perBase.length ? ': ' + perBase.map(x => `${esc(x.b)} <strong>${money(x.a)}</strong>`).join(', ') : ''}. Those amounts are also taken out of the card balances.</p>
                 ${cardIssues > 0 ? '<p class="text-amber-300 text-xs">Fuel issued from cards is kept, so a card balance can show low or negative until loads are recorded again.</p>' : ''}
-                <p class="text-xs text-slate-500">Card issuing records, main tank stock, vehicles, routes and card alert thresholds are not touched.</p>`;
+                `;
             document.getElementById('cclWord').value = '';
             document.getElementById('cclPin').value = '';
             document.getElementById('cclPinNote').classList.add('hidden');
@@ -2331,8 +2709,8 @@
         }
         function exportIssueRows(logs, name) {
             downloadCsv(name, [
-                ['Ref', 'Date', 'Source', 'Asset', 'Category', 'Purpose', 'Route / Destination', 'Fuel', 'Liters', 'Rate (GHS/L)', 'Amount (GHS)', 'Card no.', 'Meter', 'Driver / Operator', 'Dispenser', 'Remarks'],
-                ...logs.map(l => [l.id, String(l.date).replace('T', ' '), issueSource(l), l.truckId, issueCategory(l), issuePurpose(l), l.destination, l.fuelType, l.quantity, issueRate(l) ?? '', issueRate(l) === null ? '' : issueAmount(l).toFixed(2), l.cardNo || '', l.meter ?? '', l.driver, l.dispenser || '', l.remarks || ''])
+                ['Ref', 'Date', 'Source', 'Asset', 'Category', 'Product type', 'Purpose', 'Route / Destination', 'Fuel', 'Liters', 'Rate (GHS/L)', 'Amount (GHS)', 'Card no.', 'Odometer', 'Driver / Operator', 'Dispenser', 'Remarks'],
+                ...logs.map(l => [l.id, String(l.date).replace('T', ' '), issueSource(l), l.truckId, issueCategory(l), issueProductType(l), issuePurpose(l), l.destination, l.fuelType, l.quantity, issueRate(l) ?? '', issueRate(l) === null ? '' : issueAmount(l).toFixed(2), l.cardNo || '', l.meter ?? '', l.driver, l.dispenser || '', l.remarks || ''])
             ]);
         }
         function exportIssueHistoryCsv() {
@@ -2350,7 +2728,7 @@
                 <p>This permanently deletes <strong>${logs.length}</strong> dispensing record(s).</p>
                 ${mainCount ? `<p class="text-xs">Main Base: <strong>${fmt(tot('Diesel'))} L</strong> diesel and <strong>${fmt(tot('Petrol'))} L</strong> petrol will be put back into current tank stock.</p>` : ''}
                 ${cardLogs.length ? `<p class="text-xs">Cards: ${cardLogs.length} record(s) worth <strong>${money(cardAmt)}</strong> will be returned to the card balance(s).</p>` : ''}
-                <p class="text-xs text-slate-500">Deliveries, card loads, opening stock, vehicles and routes are not touched.</p>`
+                `
                 : '<p class="text-amber-300 text-xs">There are no dispensing records for this selection.</p>';
             validateClearIssued();
         }
@@ -2582,7 +2960,7 @@
                 <tr class="hover:bg-slate-800/40">
                     <td class="py-2.5 px-3 text-xs">${esc(formatDate(r.date))}</td>
                     <td class="py-2.5 px-3 text-[11px] font-mono text-slate-500">${esc(r.id)}</td>
-                    <td class="py-2.5 px-3 text-xs font-mono text-sky-400">${esc(r.waybill)}</td>
+                    <td class="py-2.5 px-3 text-xs font-mono text-sky-400">${esc(r.waybill)}${r.invoiceDate ? `<div class="text-[10px] text-slate-500 font-sans">Inv. ${esc(formatInvoiceDate(r.invoiceDate))}</div>` : ''}</td>
                     <td class="py-2.5 px-3 text-xs">${esc(r.supplier)}</td>
                     <td class="py-2.5 px-3 text-xs">${esc(r.fuelType)}</td>
                     <td class="py-2.5 px-3 text-xs text-right font-bold text-emerald-400">${fmt(r.quantity)}</td>
@@ -2612,8 +2990,8 @@
                     { label: 'Petrol (L)', data: keys.map(k => buckets[k].Petrol), backgroundColor: 'rgba(2, 132, 199, 0.75)', borderRadius: 6 }
                 ] },
                 options: { responsive: true, maintainAspectRatio: false,
-                    plugins: { legend: { labels: { color: '#94a3b8', font: { size: 11 } } } },
-                    scales: { x: { stacked: true, ticks: { color: '#94a3b8', font: { size: 10 } }, grid: { display: false } }, y: { stacked: true, ticks: { color: '#94a3b8', font: { size: 10 } }, grid: { color: 'rgba(51, 65, 85, 0.3)' } } } }
+                    plugins: { legend: { labels: { color: chartTxt(), font: { size: 11 } } } },
+                    scales: { x: { stacked: true, ticks: { color: chartTxt(), font: { size: 10 } }, grid: { display: false } }, y: { stacked: true, ticks: { color: chartTxt(), font: { size: 10 } }, grid: { color: chartGrid(0.3) } } } }
             });
         }
 
@@ -2633,11 +3011,19 @@
         const SERVICE_DEST = 'Servicing / Maintenance';
         const CUSTOM_DEST = '__custom__';
 
+        function routeAllowance(name) {
+            const d = appState.destinations.find(x => x.name === name);
+            if (d) return d.allowance || 0;
+            const parts = String(name || '').split(STOP_SEP);
+            if (parts.length < 2) return 0;
+            return parts.reduce((a, n) => { const x = appState.destinations.find(y => y.name === n); return a + (x ? (x.allowance || 0) : 0); }, 0);
+        }
         function assetCategory(t) { return (t && t.category) || 'Vehicle'; }
         function issueCategory(l) {
             return l.category || assetCategory(appState.trucks.find(t => t.id === l.truckId));
         }
         function issuePurpose(l) { return l.purpose || 'Operations'; }
+        function issueProductType(l) { return l.productType || 'N/A'; }
         function meterText(l) {
             if (l.meter === null || l.meter === undefined || l.meter === '') return '—';
             return Number(l.meter).toLocaleString() + (issueCategory(l) === 'Gen Set' ? ' hrs' : ' km');
@@ -2646,7 +3032,8 @@
             let b = '';
             if (issueSource(l) !== MAIN_BASE) b += '<span class="px-1.5 py-0.5 text-[9px] font-semibold rounded bg-teal-500/10 text-teal-300 border border-teal-500/20">' + esc(issueSource(l).toUpperCase()) + ' CARD</span> ';
             if (issueCategory(l) === 'Gen Set') b += '<span class="px-1.5 py-0.5 text-[9px] font-semibold rounded bg-violet-500/10 text-violet-300 border border-violet-500/20">GEN SET</span> ';
-            if (issuePurpose(l) === 'Servicing') b += '<span class="px-1.5 py-0.5 text-[9px] font-semibold rounded bg-orange-500/10 text-orange-300 border border-orange-500/20">SERVICING</span>';
+            if (issuePurpose(l) === 'Servicing') b += '<span class="px-1.5 py-0.5 text-[9px] font-semibold rounded bg-orange-500/10 text-orange-300 border border-orange-500/20">SERVICING</span> ';
+            if (issueProductType(l) !== 'N/A') b += '<span class="px-1.5 py-0.5 text-[9px] font-semibold rounded bg-pink-500/10 text-pink-300 border border-pink-500/20">' + esc(issueProductType(l).toUpperCase()) + '</span>';
             return b ? `<div class="mt-1 flex gap-1">${b}</div>` : '';
         }
 
@@ -2669,10 +3056,74 @@
 
             // Suggestions: destinations typed in earlier dispenses that are not on the saved list
             const knownDest = new Set(appState.destinations.map(d => d.name.toLowerCase()));
-            const pastCustom = [...new Set(appState.issueLogs.map(l => l.destination).filter(n => n && n !== GENSET_DEST && n !== SERVICE_DEST && !knownDest.has(String(n).toLowerCase())))];
+            const pastCustom = [...new Set(appState.issueLogs.flatMap(stopsOf).filter(n => n && n !== GENSET_DEST && n !== SERVICE_DEST && !knownDest.has(String(n).toLowerCase())))];
             document.getElementById('issDestHistory').innerHTML = pastCustom.map(n => `<option value="${esc(n)}"></option>`).join('');
+            document.getElementById('issStopList').innerHTML = [...appState.destinations.filter(d => d.active).map(d => d.name), ...pastCustom].map(n => `<option value="${esc(n)}"></option>`).join('');
 
             updateIssueFormMode(!!categoryChanged);
+        }
+
+        // ---- Multiple destinations for one trip ----
+        const STOP_SEP = ' \u2192 ';
+        const MAX_STOPS = 8;
+        function cleanStop(v) { return String(v || '').trim().replace(/\s+/g, ' '); }
+        function stopsOf(l) {
+            if (l && Array.isArray(l.stops) && l.stops.length) return l.stops;
+            return l && l.destination ? [l.destination] : [];
+        }
+        function addDestStop(value) {
+            const box = document.getElementById('issExtraStops');
+            if (box.children.length >= MAX_STOPS - 1) { showNotification(`A trip can have up to ${MAX_STOPS} destinations.`, 'error'); return; }
+            const row = document.createElement('div');
+            row.className = 'flex items-center gap-2 dest-stop-row';
+            row.innerHTML = `<span class="text-[10px] font-bold text-slate-500 w-5 text-center dest-stop-num"></span>
+                <input type="text" list="issStopList" maxlength="80" autocomplete="off" oninput="updateRoutePreview()" placeholder="Next destination, e.g. Tamale" class="dest-stop-input flex-1 bg-slate-950 border border-sky-600/60 rounded-xl px-3 py-2 text-sm text-slate-100 focus:outline-none focus:border-sky-500">
+                <button type="button" onclick="removeDestStop(this)" title="Remove this destination" class="text-slate-400 hover:text-rose-400 px-1.5"><i class="fa-solid fa-trash-can"></i></button>`;
+            box.appendChild(row);
+            const inp = row.querySelector('input');
+            if (value) inp.value = value; else inp.focus();
+            updateRoutePreview();
+        }
+        function removeDestStop(btn) {
+            btn.closest('.dest-stop-row').remove();
+            updateRoutePreview();
+        }
+        function clearDestStops() {
+            document.getElementById('issExtraStops').innerHTML = '';
+            const sv = document.getElementById('issStopSave'); if (sv) sv.checked = false;
+            updateRoutePreview();
+        }
+        function getExtraStops() {
+            return [...document.querySelectorAll('#issExtraStops .dest-stop-input')].map(i => cleanStop(i.value)).filter(Boolean);
+        }
+        function firstStopText() {
+            const v = document.getElementById('issDestSelect').value;
+            return v === CUSTOM_DEST ? cleanStop(document.getElementById('issDestCustom').value) : v;
+        }
+        function buildStops(first, extras) {
+            const out = [];
+            [first, ...extras].forEach(n => {
+                n = cleanStop(n);
+                if (!n) return;
+                const known = appState.destinations.find(d => d.name.toLowerCase() === n.toLowerCase());
+                if (known) n = known.name;
+                if (out.length && out[out.length - 1].toLowerCase() === n.toLowerCase()) return;   // same place twice in a row
+                out.push(n);
+            });
+            return out;
+        }
+        function updateRoutePreview() {
+            const rows = document.querySelectorAll('#issExtraStops .dest-stop-row');
+            rows.forEach((r, i) => { r.querySelector('.dest-stop-num').textContent = (i + 2) + '.'; });
+            const stops = buildStops(firstStopText(), getExtraStops());
+            const prev = document.getElementById('issRoutePreview');
+            const show = stops.length > 1;
+            prev.classList.toggle('hidden', !show);
+            if (show) prev.textContent = 'Trip route (' + stops.length + ' destinations): ' + stops.join(STOP_SEP);
+            // offer the "save new destinations" tick only when an extra stop is not on the saved list yet
+            const known = new Set(appState.destinations.map(d => d.name.toLowerCase()));
+            const hasNew = getExtraStops().some(n => !known.has(n.toLowerCase()));
+            document.getElementById('issStopSaveWrap').classList.toggle('hidden', !hasNew);
         }
 
         function toggleCustomDest() {
@@ -2682,6 +3133,7 @@
             document.getElementById('issDestCustomWrap').classList.toggle('hidden', !(isTrip && isCustom));
             input.required = isTrip && isCustom;
             if (isTrip && isCustom) input.focus();
+            updateRoutePreview();
         }
 
         function updateIssueFormMode(reset) {
@@ -2693,8 +3145,10 @@
 
             const src = document.getElementById('issSource').value;
             const isCardSrc = src !== MAIN_BASE;
-            document.getElementById('issCardNoWrap').classList.toggle('hidden', !isCardSrc);
-            document.getElementById('lblIssStock').innerText = isCardSrc ? `${src} Card Balance (GH₵)` : 'Current Stock';
+            const rateElSrc = document.getElementById('issRate');
+            if (lastIssSrc !== null && lastIssSrc !== src) delete rateElSrc.dataset.touched;   // new source = its own suggested rate
+            lastIssSrc = src;
+            document.getElementById('lblIssStock').innerText = isCardSrc ? `${src} Card Balance (GH₵)` : 'Current Stock (Tema)';
             document.getElementById('lblIssDispenser').innerText = isCardSrc ? 'Issuing Officer Name' : 'Dispenser Operator Name';
 
             document.getElementById('issDestWrap').classList.toggle('hidden', !isTrip);
@@ -2781,7 +3235,6 @@
             const dispenser = document.getElementById('issDispenser').value.trim();
             const remarks = document.getElementById('issRemarks').value.trim();
             const source = document.getElementById('issSource').value;
-            const cardNo = document.getElementById('issCardNo').value.trim();
 
             const isTrip = category === 'Vehicle' && purpose === 'Operations';
             let destination = isTrip
@@ -2813,7 +3266,7 @@
                 return;
             }
             if (purpose === 'Operations' && meter === null) {
-                alert('Please enter the meter reading.');
+                alert('Please enter the odometer reading.');
                 return;
             }
 
@@ -2836,11 +3289,31 @@
                 return;
             }
 
+            // Multi-destination trip: first stop + any extra stops, in travel order
+            let stops = null;
+            if (isTrip) {
+                const all = buildStops(destination, getExtraStops());
+                if (all.length > 1) {
+                    stops = all;
+                    destination = all.join(STOP_SEP);
+                    if (document.getElementById('issStopSave').checked) {
+                        all.forEach(n => {
+                            if (!appState.destinations.some(d => d.name.toLowerCase() === n.toLowerCase())) {
+                                appState.destinations.push({ name: n, distance: 0, allowance: 0, active: true });
+                                newlySavedDest = true;
+                            }
+                        });
+                    }
+                }
+            }
+
             const newIssue = {
                 id: 'ISS-' + Math.floor(1000 + Math.random() * 9000),
                 date, truckId, destination, fuelType, quantity, rate, amount, meter, driver, dispenser,
-                category, purpose, remarks, source, cardNo: isCardSrc ? cardNo : ''
+                category, purpose, remarks, source, cardNo: isCardSrc ? cardNumber(source) : '',
+                productType: document.getElementById('issProductType').value || 'N/A'
             };
+            if (stops) newIssue.stops = stops;
 
             appState.issueLogs.unshift(newIssue);
             if (!isCardSrc) appState.tanks[fuelType].current = r3(appState.tanks[fuelType].current - quantity);
@@ -2849,6 +3322,7 @@
             const cardAfter = isCardSrc ? cardStatus(source) : null;
             if (newlySavedDest && typeof renderDestinationsTable === 'function') renderDestinationsTable();
             document.getElementById('issueForm').reset();
+            clearDestStops();
             delete document.getElementById('issRate').dataset.touched;
             setupDateInputs();
             document.getElementById('issSource').value = source;   // stay on the same base for the next fill
@@ -3621,8 +4095,8 @@
                     maintainAspectRatio: false,
                     plugins: { legend: { display: false } },
                     scales: {
-                        x: { ticks: { color: '#94a3b8', font: { size: 10 } }, grid: { display: false } },
-                        y: { ticks: { color: '#94a3b8', font: { size: 10 } }, grid: { color: 'rgba(51, 65, 85, 0.3)' } }
+                        x: { ticks: { color: chartTxt(), font: { size: 10 } }, grid: { display: false } },
+                        y: { ticks: { color: chartTxt(), font: { size: 10 } }, grid: { color: chartGrid(0.3) } }
                     }
                 }
             });
@@ -3656,8 +4130,8 @@
                     maintainAspectRatio: false,
                     plugins: { legend: { display: false } },
                     scales: {
-                        x: { ticks: { color: '#94a3b8', font: { size: 10 } }, grid: { display: false } },
-                        y: { ticks: { color: '#94a3b8', font: { size: 10 } }, grid: { color: 'rgba(51, 65, 85, 0.3)' } }
+                        x: { ticks: { color: chartTxt(), font: { size: 10 } }, grid: { display: false } },
+                        y: { ticks: { color: chartTxt(), font: { size: 10 } }, grid: { color: chartGrid(0.3) } }
                     }
                 }
             });
@@ -3679,11 +4153,11 @@
                 labels.push(d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }));
 
                 const rTotal = appState.receiveLogs
-                    .filter(l => l.date.startsWith(dateStr))
+                    .filter(l => fuelOk(l) && l.date.startsWith(dateStr))
                     .reduce((a, b) => a + Number(b.quantity), 0);
 
                 const iTotal = mainIssues()
-                    .filter(l => l.date.startsWith(dateStr))
+                    .filter(l => fuelOk(l) && l.date.startsWith(dateStr))
                     .reduce((a, b) => a + Number(b.quantity), 0);
 
                 receiveSeries.push(rTotal);
@@ -3717,11 +4191,11 @@
                     responsive: true,
                     maintainAspectRatio: false,
                     plugins: {
-                        legend: { labels: { color: '#94a3b8', font: { size: 11 } } }
+                        legend: { labels: { color: chartTxt(), font: { size: 11 } } }
                     },
                     scales: {
-                        x: { ticks: { color: '#94a3b8', font: { size: 10 } }, grid: { color: 'rgba(51, 65, 85, 0.2)' } },
-                        y: { ticks: { color: '#94a3b8', font: { size: 10 } }, grid: { color: 'rgba(51, 65, 85, 0.2)' } }
+                        x: { ticks: { color: chartTxt(), font: { size: 10 } }, grid: { color: chartGrid(0.2) } },
+                        y: { ticks: { color: chartTxt(), font: { size: 10 } }, grid: { color: chartGrid(0.2) } }
                     }
                 }
             });
@@ -3792,8 +4266,8 @@
                 const t = appState.trucks.find(x => x.id === l.truckId);
                 if (t && t.capacity > 0 && row.quantity > t.capacity) row.flags.push(`Issued ${fmt(row.quantity)} L exceeds tank capacity (${fmt(t.capacity)} L)`);
                 if (category === 'Vehicle' && purpose === 'Operations') {
-                    const d = appState.destinations.find(x => x.name === l.destination);
-                    if (d && d.allowance > 0 && row.quantity > d.allowance) row.flags.push(`Over route allowance by ${fmt(row.quantity - d.allowance)} L`);
+                    const allow = routeAllowance(l.destination);
+                    if (allow > 0 && row.quantity > allow) row.flags.push(`Over route allowance by ${fmt(row.quantity - allow)} L`);
                 }
                 all.push(row);
             });
@@ -3933,16 +4407,16 @@
 
             // Routes
             document.getElementById('rptRouteTable').innerHTML = R.routes.length ? R.routes.map(r => {
-                const d = appState.destinations.find(x => x.name === r.name);
+                const allow = routeAllowance(r.name);
                 const avg = r.liters / r.trips;
-                const varPct = d && d.allowance ? (avg - d.allowance) / d.allowance * 100 : null;
+                const varPct = allow ? (avg - allow) / allow * 100 : null;
                 return `<tr class="hover:bg-slate-800/40">
                     <td class="py-3 px-3 font-semibold text-white">${esc(r.name)}</td>
                     <td class="py-3 px-3 text-right">${r.trips}</td>
                     <td class="py-3 px-3 text-right">${fmt(r.liters)}</td>
                     <td class="py-3 px-3 text-right font-bold text-amber-300">${amtTxt(r.amount)}</td>
                     <td class="py-3 px-3 text-right font-bold text-sky-400">${fmt(avg)}</td>
-                    <td class="py-3 px-3 text-right">${d ? fmt(d.allowance) : '—'}</td>
+                    <td class="py-3 px-3 text-right">${allow ? fmt(allow) : '—'}</td>
                     <td class="py-3 px-3 text-right ${varPct > 0 ? 'text-rose-400' : 'text-emerald-400'}">${varPct === null ? '—' : (varPct > 0 ? '+' : '') + fmt(varPct) + '%'}</td>
                 </tr>`;
             }).join('') : empty(7);
@@ -4001,10 +4475,10 @@
                 },
                 options: {
                     responsive: true, maintainAspectRatio: false,
-                    plugins: { legend: { labels: { color: '#94a3b8', font: { size: 11 } } } },
+                    plugins: { legend: { labels: { color: chartTxt(), font: { size: 11 } } } },
                     scales: {
-                        x: { stacked: true, ticks: { color: '#94a3b8', font: { size: 10 } }, grid: { display: false } },
-                        y: { stacked: true, ticks: { color: '#94a3b8', font: { size: 10 } }, grid: { color: 'rgba(51, 65, 85, 0.3)' } }
+                        x: { stacked: true, ticks: { color: chartTxt(), font: { size: 10 } }, grid: { display: false } },
+                        y: { stacked: true, ticks: { color: chartTxt(), font: { size: 10 } }, grid: { color: chartGrid(0.3) } }
                     }
                 }
             });
@@ -4067,6 +4541,56 @@
         }
         function cardBalance(base) { return cardStats(base).balance; }
 
+        // Permanent card number per base (set once) and current card rate per base and fuel (GH₵/L).
+        function cardNumber(base) { return String((appState.cardNumbers || {})[base] || ''); }
+        function cardRate(base, fuel) {
+            const v = Number(((appState.cardRates || {})[base] || {})[fuel]);
+            return v > 0 ? v : null;
+        }
+        function loadRateText(l) {
+            const parts = [];
+            if (hasVal(l.rateDiesel) && Number(l.rateDiesel) > 0) parts.push('Diesel ' + fmt(l.rateDiesel, 4));
+            if (hasVal(l.ratePetrol) && Number(l.ratePetrol) > 0) parts.push('Petrol ' + fmt(l.ratePetrol, 4));
+            return parts.join(' · ');
+        }
+
+        let cnrBase = null, cnrChanging = false;
+        function openCardNumber(base, changing) {
+            cnrBase = base; cnrChanging = !!changing;
+            document.getElementById('cnrTitle').textContent = base + (changing ? ' card: change card number' : ' card: set card number');
+            document.getElementById('cnrNote').textContent = changing
+                ? 'The card number is meant to be permanent. Only change it if it was entered wrongly or the card was replaced. Past records keep the number they were saved with.'
+                : 'Enter this card\'s number once. It is saved permanently and applied automatically to every card load and every issue from this card, so it is no longer typed each time.';
+            document.getElementById('cnrNo').value = changing ? cardNumber(base) : '';
+            document.getElementById('cnrPin').value = '';
+            document.getElementById('cnrPinWrap').classList.toggle('hidden', !(changing && pinIsSet()));
+            document.getElementById('cardNumberModal').classList.remove('hidden');
+            setTimeout(() => document.getElementById('cnrNo').focus(), 50);
+        }
+        function closeCardNumber() {
+            document.getElementById('cardNumberModal').classList.add('hidden');
+            cnrBase = null;
+        }
+        function saveCardNumber(e) {
+            e.preventDefault();
+            if (!cnrBase) return;
+            const base = cnrBase;
+            const v = document.getElementById('cnrNo').value.trim().replace(/\s+/g, ' ');
+            if (!v) { showNotification('Enter the card number.', 'error'); return; }
+            if (cardNumber(base) && !cnrChanging) { closeCardNumber(); showNotification(base + ' card already has a number.', 'error'); return; }
+            const clash = CARD_BASES.find(b => b !== base && cardNumber(b) && normKey(cardNumber(b)) === normKey(v));
+            if (clash) { showNotification(`That number is already used by the ${clash} card.`, 'error'); return; }
+            if (cnrChanging) {
+                if (pinIsSet() && !pinMatches(document.getElementById('cnrPin').value)) { showNotification('Incorrect approval PIN.', 'error'); return; }
+                if (!pinIsSet() && !confirm(`Change the ${base} card number to ${v}?`)) return;
+            }
+            if (!appState.cardNumbers) appState.cardNumbers = {};
+            appState.cardNumbers[base] = v;
+            closeCardNumber();
+            saveState();
+            showNotification(`${base} card number saved: ${v}.`);
+        }
+
         // Low-balance threshold per base (GH₵). 0 / blank = no alert for that base.
         function cardThreshold(base) {
             const t = Number((appState.cardThresholds || {})[base]);
@@ -4088,6 +4612,14 @@
             const border = isLow ? 'border-rose-500/60 ring-1 ring-rose-500/30' : 'border-slate-800';
             const pct = hasThr ? Math.min(100, Math.max(0, (st.bal / (st.thr * 2)) * 100)) : 0;
             const barColor = isLow ? 'bg-rose-500' : (st.bal <= st.thr * 1.25 ? 'bg-amber-500' : 'bg-teal-500');
+            const cNo = cardNumber(base), rD = cardRate(base, 'Diesel'), rP = cardRate(base, 'Petrol');
+            const idHtml = `<div class="mt-2 flex items-center justify-between gap-2 text-[11px]">
+                    ${cNo ? `<span class="text-slate-400"><i class="fa-solid fa-lock text-slate-500 mr-1"></i>Card no. <strong class="font-mono text-slate-200">${esc(cNo)}</strong></span>
+                        ${withActions ? `<button type="button" onclick="openCardNumber('${base}', true)" class="text-slate-500 hover:text-slate-300 underline">Change</button>` : ''}`
+                    : (withActions ? `<button type="button" onclick="openCardNumber('${base}', false)" class="w-full py-1.5 text-xs font-semibold bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-lg border border-slate-700"><i class="fa-solid fa-hashtag mr-1"></i> Set card number</button>`
+                        : '<span class="text-slate-500">No card number set</span>')}
+                </div>
+                <div class="mt-1 text-[11px] text-slate-400">Card rate: ${isFuelActive('Diesel') ? `Diesel <strong class="text-slate-200">${rD ? fmt(rD, 4) : '—'}</strong>` : ''}${isFuelActive('Diesel') && isFuelActive('Petrol') ? ' · ' : ''}${isFuelActive('Petrol') ? `Petrol <strong class="text-slate-200">${rP ? fmt(rP, 4) : '—'}</strong>` : ''} <span class="text-slate-600">GH₵/L</span></div>`;
             const thrHtml = hasThr ? `
                 <div class="mt-3">
                     <div class="flex items-center justify-between text-[11px] mb-1">
@@ -4108,6 +4640,7 @@
                 </div>
                 <div class="text-2xl font-bold ${s.balance < 0 ? 'text-rose-400' : 'text-white'}">${money(s.balance)}</div>
                 <div class="mt-2 text-[11px] text-slate-400"><span class="inline-block h-2 w-2 rounded-full bg-amber-500 mr-1"></span>Diesel issued ${fmt(s.litres.Diesel)} L <span class="inline-block h-2 w-2 rounded-full bg-sky-500 ml-2 mr-1"></span>Petrol issued ${fmt(s.litres.Petrol)} L</div>
+                ${idHtml}
                 ${thrHtml}
                 <div class="mt-3 pt-3 border-t border-slate-800/80 flex justify-between text-xs text-slate-400">
                     <span>Loaded: <strong class="text-slate-300">${money(s.loaded)}</strong></span>
@@ -4147,6 +4680,7 @@
 
         function startCardLoad(base) {
             document.getElementById('clBase').value = base;
+            updateCardLoadFormInfo();
             document.getElementById('clAmount').focus();
         }
         function startCardIssue(base) {
@@ -4165,7 +4699,9 @@
             const tiles = document.getElementById('cardBaseTiles');
             if (!tiles) return;
             tiles.innerHTML = CARD_BASES.map(b => cardTileHtml(b, true)).join('');
-            document.getElementById('dashCardBases').innerHTML = CARD_BASES.map(b => cardTileHtml(b, false)).join('');
+            document.getElementById('dashCardBases').innerHTML = CARD_BASES.map(b => dashCardHtml(b)).join('');
+            document.getElementById('dashCardsTotal').textContent = money(CARD_BASES.reduce((a, b) => a + cardStats(b).balance, 0));
+            updateCardLoadCardNo();
 
             const on = 'px-3 py-1.5 text-xs font-semibold rounded-lg bg-teal-600 text-white transition';
             const off = 'px-3 py-1.5 text-xs font-semibold rounded-lg text-slate-300 hover:bg-slate-800 transition';
@@ -4179,7 +4715,7 @@
             const loads = cardLoads().filter(l => (baseF === 'ALL' || l.base === baseF) &&
                 (!q || normKey([l.ref, l.cardNo, l.supplier, l.officer, l.approvedBy, l.base].join(' ')).includes(q)));
             const issues = appState.issueLogs.filter(l => issueSource(l) !== MAIN_BASE && (baseF === 'ALL' || issueSource(l) === baseF) &&
-                (!q || normKey([l.truckId, l.driver, l.cardNo, l.remarks, l.destination, l.dispenser].join(' ')).includes(q)));
+                (!q || normKey([l.truckId, l.driver, l.cardNo, l.remarks, l.destination, l.dispenser, l.productType].join(' ')).includes(q)));
 
             const sumL = arr => arr.reduce((a, l) => a + Number(l.quantity), 0);
             const sumAmtLoads = arr => arr.reduce((a, l) => a + loadAmount(l), 0);
@@ -4199,7 +4735,7 @@
                     <td class="py-3 px-3">${baseBadge(l.base)}</td>
                     <td class="py-3 px-3 font-mono text-xs text-sky-400">${esc(l.ref)}${l.cardNo ? `<div class="text-[10px] text-slate-500">Card ${esc(l.cardNo)}</div>` : ''}</td>
                     <td class="py-3 px-3 text-slate-200">${esc(l.supplier)}</td>
-                    <td class="py-3 px-3 text-right font-bold text-emerald-400">+${fmt(loadAmount(l), 2)}${legacy ? `<div class="text-[10px] font-normal text-slate-500">earlier load: ${fmt(l.quantity)} L ${esc(l.fuelType || '')}</div>` : ''}</td>
+                    <td class="py-3 px-3 text-right font-bold text-emerald-400">+${fmt(loadAmount(l), 2)}${legacy ? `<div class="text-[10px] font-normal text-slate-500">earlier load: ${fmt(l.quantity)} L ${esc(l.fuelType || '')}</div>` : ''}${loadRateText(l) ? `<div class="text-[10px] font-normal text-slate-500">Rate: ${esc(loadRateText(l))}</div>` : ''}</td>
                     <td class="py-3 px-3 text-xs text-slate-400">${esc(l.officer)}${l.approvedBy ? `<div class="text-[10px] text-emerald-500/80"><i class="fa-solid fa-circle-check mr-1"></i>${esc(l.approvedBy)}</div>` : ''}</td>
                     <td class="py-3 px-3 text-right"><button type="button" onclick="printCardLoad('${esc(l.id)}')" class="text-xs text-sky-400 hover:text-sky-300" title="Print card load note"><i class="fa-solid fa-print"></i></button></td>
                 </tr>`;
@@ -4214,9 +4750,26 @@
                     <td class="py-3 px-3 text-right font-bold text-sky-400">${Number(l.quantity).toLocaleString()}</td>
                     <td class="py-3 px-3 text-right text-xs text-slate-300">${issueRate(l) === null ? '—' : fmt(issueRate(l), 2)}</td>
                     <td class="py-3 px-3 text-right text-xs font-bold text-amber-300">${issueRate(l) === null ? '—' : fmt(issueAmount(l), 2)}</td>
-                    <td class="py-3 px-3 font-mono text-xs text-slate-400">${esc(l.cardNo || '—')}</td>
+                    <td class="py-3 px-3 font-mono text-xs text-slate-400">${esc(l.cardNo || cardNumber(issueSource(l)) || '—')}</td>
                     <td class="py-3 px-3 text-xs text-slate-300">${esc(l.driver)}</td>
                 </tr>`).join('') : `<tr><td colspan="10" class="py-8 text-center text-sm text-slate-500">No fuel has been issued from cards yet. Choose a base under "Issue From" on the Dispense / Issue page.</td></tr>`;
+        }
+
+        // Shows the selected base's permanent card number in the load form.
+        function updateCardLoadCardNo() {
+            const el = document.getElementById('clCardNoDisplay'); if (!el) return;
+            const n = cardNumber(document.getElementById('clBase').value);
+            el.textContent = n || 'Not set yet (set it on the card tile)';
+            el.classList.toggle('text-slate-500', !n);
+            el.classList.toggle('text-slate-300', !!n);
+        }
+        // When the base changes: show its card number and pre-fill its current card rates.
+        function updateCardLoadFormInfo() {
+            const base = document.getElementById('clBase').value;
+            updateCardLoadCardNo();
+            const d = cardRate(base, 'Diesel'), p = cardRate(base, 'Petrol');
+            document.getElementById('clRateDiesel').value = d === null ? '' : d;
+            document.getElementById('clRatePetrol').value = p === null ? '' : p;
         }
 
         function findDuplicateCardLoad(base, ref) {
@@ -4228,9 +4781,14 @@
             const g = id => document.getElementById(id).value.trim();
             const amount = r2(parseFloat(document.getElementById('clAmount').value));
             if (!(amount > 0)) { showNotification('Enter an amount (GH₵) greater than zero.', 'error'); return; }
+            const r4 = x => Math.round(x * 10000) / 10000;
+            const rD = parseFloat(document.getElementById('clRateDiesel').value);
+            const rP = parseFloat(document.getElementById('clRatePetrol').value);
+            if (!(rD > 0) && !(rP > 0)) { showNotification('Enter the card rate (GH₵ per litre) for at least one fuel.', 'error'); return; }
             pendingCardLoad = {
                 date: g('cldDate'), base: g('clBase'), supplier: g('clSupplier'), ref: g('clRef'),
-                cardNo: g('clCardNo'), amount, officer: g('clOfficer'), remarks: g('clRemarks')
+                cardNo: cardNumber(g('clBase')), amount, officer: g('clOfficer'), remarks: g('clRemarks'),
+                rateDiesel: rD > 0 ? r4(rD) : null, ratePetrol: rP > 0 ? r4(rP) : null
             };
             openCardLoadConfirm();
         }
@@ -4250,6 +4808,7 @@
                 ${rcRow('Card provider / supplier', esc(p.supplier))}
                 ${rcRow('Load ref / receipt #', `<span class="font-mono">${esc(p.ref)}</span>`)}
                 ${p.cardNo ? rcRow('Card no.', esc(p.cardNo)) : ''}
+                ${rcRow('Card rate (GH₵/L)', esc(loadRateText(p) || '—'))}
                 ${rcRow('Loaded by', esc(p.officer))}
                 ${p.remarks ? rcRow('Remarks', esc(p.remarks)) : ''}
                 ${rcRow(`${esc(p.base)} card balance`, `${money(cur)} → <strong>${money(r2(cur + p.amount))}</strong>`)}
@@ -4297,18 +4856,24 @@
 
             const newLoad = {
                 id: 'CLD-' + Date.now().toString(36).toUpperCase(),
-                date: p.date, base: p.base, amount: p.amount, supplier: p.supplier, ref: p.ref, cardNo: p.cardNo,
+                date: p.date, base: p.base, amount: p.amount, supplier: p.supplier, ref: p.ref, cardNo: cardNumber(p.base),
+                rateDiesel: p.rateDiesel, ratePetrol: p.ratePetrol,
                 officer: p.officer, remarks: p.remarks,
                 approvedBy: document.getElementById('clcApprover').value.trim(), approvedAt: new Date().toISOString()
             };
             if (!Array.isArray(appState.cardLoads)) appState.cardLoads = [];
             appState.cardLoads.unshift(newLoad);
+            if (!appState.cardRates) appState.cardRates = {};
+            if (!appState.cardRates[newLoad.base]) appState.cardRates[newLoad.base] = {};
+            if (newLoad.rateDiesel > 0) appState.cardRates[newLoad.base].Diesel = newLoad.rateDiesel;
+            if (newLoad.ratePetrol > 0) appState.cardRates[newLoad.base].Petrol = newLoad.ratePetrol;
             pendingCardLoad = null;
             closeCardLoadConfirm();
             saveState();
             document.getElementById('cardLoadForm').reset();
             setupDateInputs();
             document.getElementById('clBase').value = newLoad.base;   // stay on the same base for the next load
+            updateCardLoadFormInfo();
             showNotification(`Card load approved: ${money(newLoad.amount)} added to ${newLoad.base} cards.`);
         }
 
@@ -4322,7 +4887,7 @@
                 <table style="border-collapse:collapse;width:100%;font-size:14px">
                 ${row('Date &amp; time', esc(formatDate(l.date)))}${row('Base', esc(l.base))}${row('Card provider / supplier', esc(l.supplier))}
                 ${row('Load ref / receipt #', esc(l.ref))}${l.cardNo ? row('Card no.', esc(l.cardNo)) : ''}
-                ${row('Amount loaded', money(loadAmount(l)))}
+                ${row('Amount loaded', money(loadAmount(l)))}${loadRateText(l) ? row('Card rate (GH₵/L)', esc(loadRateText(l))) : ''}
                 ${row('Loaded by (officer)', esc(l.officer))}${row('Approved by', esc(l.approvedBy || '—'))}
                 ${l.remarks ? row('Remarks', esc(l.remarks)) : ''}</table>
                 <div style="display:flex;justify-content:space-between;margin-top:60px;font-size:13px"><div style="border-top:1px solid #000;padding-top:6px;width:40%">Loading officer signature</div><div style="border-top:1px solid #000;padding-top:6px;width:40%">Approver signature</div></div>
@@ -4336,15 +4901,15 @@
                 const logs = cardLoads();
                 if (!logs.length) { showNotification('No card loads to export.', 'error'); return; }
                 downloadCsv(`fuel_card_loads_${localDateStr()}.csv`, [
-                    ['Ref', 'Date', 'Base', 'Load ref / receipt', 'Card no.', 'Supplier', 'Amount loaded (GHS)', 'Loaded by', 'Approved by', 'Approved at', 'Remarks'],
-                    ...logs.map(l => [l.id, String(l.date).replace('T', ' '), l.base, l.ref, l.cardNo || '', l.supplier, loadAmount(l).toFixed(2), l.officer, l.approvedBy || '', l.approvedAt || '', l.remarks || ''])
+                    ['Ref', 'Date', 'Base', 'Load ref / receipt', 'Card no.', 'Supplier', 'Amount loaded (GHS)', 'Diesel rate (GHS/L)', 'Petrol rate (GHS/L)', 'Loaded by', 'Approved by', 'Approved at', 'Remarks'],
+                    ...logs.map(l => [l.id, String(l.date).replace('T', ' '), l.base, l.ref, l.cardNo || '', l.supplier, loadAmount(l).toFixed(2), l.rateDiesel ?? '', l.ratePetrol ?? '', l.officer, l.approvedBy || '', l.approvedAt || '', l.remarks || ''])
                 ]);
             } else {
                 const logs = appState.issueLogs.filter(l => issueSource(l) !== MAIN_BASE);
                 if (!logs.length) { showNotification('No card issues to export.', 'error'); return; }
                 downloadCsv(`fuel_card_issues_${localDateStr()}.csv`, [
-                    ['Ref', 'Date', 'Base', 'Asset', 'Category', 'Purpose', 'Destination', 'Fuel', 'Liters', 'Rate (GHS/L)', 'Amount (GHS)', 'Card no.', 'Meter', 'Driver/Operator', 'Issuing officer', 'Remarks'],
-                    ...logs.map(l => [l.id, String(l.date).replace('T', ' '), issueSource(l), l.truckId, issueCategory(l), issuePurpose(l), l.destination, l.fuelType, l.quantity, issueRate(l) ?? '', issueRate(l) === null ? '' : issueAmount(l).toFixed(2), l.cardNo || '', l.meter ?? '', l.driver, l.dispenser || '', l.remarks || ''])
+                    ['Ref', 'Date', 'Base', 'Asset', 'Category', 'Product type', 'Purpose', 'Destination', 'Fuel', 'Liters', 'Rate (GHS/L)', 'Amount (GHS)', 'Card no.', 'Odometer', 'Driver/Operator', 'Issuing officer', 'Remarks'],
+                    ...logs.map(l => [l.id, String(l.date).replace('T', ' '), issueSource(l), l.truckId, issueCategory(l), issueProductType(l), issuePurpose(l), l.destination, l.fuelType, l.quantity, issueRate(l) ?? '', issueRate(l) === null ? '' : issueAmount(l).toFixed(2), l.cardNo || '', l.meter ?? '', l.driver, l.dispenser || '', l.remarks || ''])
                 ]);
             }
         }
@@ -4360,10 +4925,10 @@
             const d = appState.tanks.Diesel;
             const p = appState.tanks.Petrol;
 
-            if (d.current <= d.min) {
+            if (isFuelActive('Diesel') && d.current <= d.min) {
                 alerts.push({ type: 'Diesel', msg: `Diesel stock (${d.current.toLocaleString()} L) is below minimum reorder point (${d.min.toLocaleString()} L)!` });
             }
-            if (p.current <= p.min) {
+            if (isFuelActive('Petrol') && p.current <= p.min) {
                 alerts.push({ type: 'Petrol', msg: `Petrol stock (${p.current.toLocaleString()} L) is below minimum reorder point (${p.min.toLocaleString()} L)!` });
             }
 
@@ -4411,6 +4976,7 @@
             document.getElementById('cfgPetrolOpening').value = appState.tanks.Petrol.opening || 0;
             CARD_BASES.forEach(b => { document.getElementById('cfgCardThr_' + b).value = cardThreshold(b) || ''; });
             renderPinStatus();
+            if (typeof tlRenderSettings === 'function') tlRenderSettings();
         }
 
         function handleSettingsSave(e) {
@@ -4433,6 +4999,14 @@
         }
 
         // Helper Utility Functions
+        // Invoice date is a plain calendar date typed by the user (YYYY-MM-DD); format without timezone shifts
+        function formatInvoiceDate(v) {
+            if (!v) return '--';
+            const m = String(v).match(/^(\d{4})-(\d{2})-(\d{2})/);
+            if (!m) return String(v);
+            return new Date(+m[1], +m[2] - 1, +m[3]).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+        }
+
         function formatDate(dateString) {
             if (!dateString) return '--';
             const d = new Date(dateString);
@@ -4477,6 +5051,670 @@
         document.addEventListener('DOMContentLoaded', run);
     })();
     </script>
+    <script>
+    /* =====================================================================
+       TAB LOCK  -  choose which tabs need an access PIN (Settings > Tab Lock)
+       Stored in appState.settings.tabLock = { pinHash, tabs: [tabIds] }
+       ===================================================================== */
+    const TL_TABS = [
+        ['dashboard', 'Dashboard'], ['receive', 'Receive Fuel Stock'], ['purchases', 'Fuel Purchases'], ['issue', 'Dispense & Issue'],
+        ['cards', 'Fuel Cards'], ['fleet', 'Fleet Vehicles'], ['destinations', 'Destinations & Routes'],
+        ['reports', 'Reports'], ['reconciliation', 'Reconciliation'], ['settings', 'Settings']
+    ];
+    let tlUnlocked = new Set(), tlPending = null, tlOnOk = null, tlCancelable = true, tlFails = 0, tlBlockedUntil = 0, tlPass = false;
+    const tlEl = id => document.getElementById(id);
+    function tlCfg() { const st = appState.settings || {}; return (st.tabLock && typeof st.tabLock === 'object') ? st.tabLock : { pinHash: '', tabs: [] }; }
+    function tlHasPin() { return !!tlCfg().pinHash; }
+    function tlMatches(p) { return tlHasPin() && pinHash(String(p)) === tlCfg().pinHash; }
+    function tlIsLocked(tab) { return tlHasPin() && (tlCfg().tabs || []).includes(tab) && !tlUnlocked.has(tab); }
+    function tlSetCfg(pinH, tabs) { appState.settings = { ...(appState.settings || {}), tabLock: { pinHash: pinH, tabs: tabs } }; }
+
+    /* ---- gate used by switchTab / clearAllData ---- */
+    function tlGate(tab) {
+        if (!tlIsLocked(tab)) return false;
+        tlPending = tab; tlOnOk = () => { tlUnlocked.add(tab); tlRefreshUi(); switchTab(tab); };
+        const lbl = (TL_TABS.find(t => t[0] === tab) || [tab, tab])[1];
+        tlOpenModal('"' + lbl + '" is locked', 'Enter the access PIN to open this tab.', true);
+        return true;
+    }
+    function tlGuard(fn) {
+        if (!tlHasPin()) return false;
+        if (tlPass) { tlPass = false; return false; }
+        tlOnOk = () => { tlPass = true; fn(); };
+        tlOpenModal('Access PIN required', 'Enter the access PIN to continue.', true);
+        return true;
+    }
+    function tlOpenModal(title, note, cancelable) {
+        tlCancelable = cancelable;
+        tlEl('tlPinTitle').textContent = title; tlEl('tlPinNote').textContent = note;
+        tlEl('tlPinInput').value = ''; tlEl('tlPinErr').classList.add('hidden');
+        tlEl('tlPinCancel').classList.toggle('hidden', !cancelable);
+        if (typeof closeSidebar === 'function') closeSidebar();
+        tlEl('tlPinModal').classList.remove('hidden');
+        setTimeout(() => tlEl('tlPinInput').focus(), 50);
+    }
+    function tlCloseModal() { tlEl('tlPinModal').classList.add('hidden'); tlEl('tlPinInput').value = ''; }
+    function tlCancelPin() { if (!tlCancelable) return; tlCloseModal(); tlPending = null; tlOnOk = null; }
+    function tlSubmitPin() {
+        const err = tlEl('tlPinErr'), now = Date.now();
+        if (now < tlBlockedUntil) { err.textContent = `Too many wrong attempts. Try again in ${Math.ceil((tlBlockedUntil - now) / 1000)} s.`; err.classList.remove('hidden'); return; }
+        if (!tlMatches(tlEl('tlPinInput').value)) {
+            tlFails++;
+            if (tlFails >= 5) { tlFails = 0; tlBlockedUntil = now + 30000; err.textContent = 'Too many wrong attempts. Locked for 30 seconds.'; }
+            else err.textContent = `Incorrect PIN. ${5 - tlFails} attempt(s) left.`;
+            err.classList.remove('hidden'); tlEl('tlPinInput').value = ''; tlEl('tlPinInput').focus(); return;
+        }
+        tlFails = 0;
+        const ok = tlOnOk; tlOnOk = null; tlPending = null; tlCloseModal();
+        if (ok) ok();
+    }
+
+    /* ---- at start-up and "Lock now" ---- */
+    function tlFirstOpenTab() { const t = TL_TABS.find(x => !tlIsLocked(x[0])); return t ? t[0] : null; }
+    function tlShowBlocked(tab) {
+        tlPending = tab; tlOnOk = () => { tlUnlocked.add(tab); tlRefreshUi(); switchTab(tab); };
+        tlOpenModal('Locked', 'Every tab is locked. Enter the access PIN to continue.', false);
+    }
+    function tlOnLoad() {
+        tlRefreshUi();
+        if (!tlIsLocked(currentTab)) return;
+        const open = tlFirstOpenTab();
+        if (open) switchTab(open); else tlShowBlocked(currentTab);
+    }
+    function tlLockNow() {
+        tlUnlocked = new Set(); tlRefreshUi();
+        if (tlIsLocked(currentTab)) { const open = tlFirstOpenTab(); if (open) switchTab(open); else tlShowBlocked(currentTab); }
+        showNotification('Protected tabs are locked again.');
+    }
+
+    /* ---- nav icons + Lock now button ---- */
+    function tlRefreshUi() {
+        const cfg = tlCfg(), active = tlHasPin();
+        TL_TABS.forEach(([id]) => {
+            const nav = tlEl('nav-' + id); if (!nav) return;
+            let ic = nav.querySelector('.tl-ico');
+            const locked = active && (cfg.tabs || []).includes(id);
+            if (!locked) { if (ic) ic.remove(); return; }
+            if (!ic) { ic = document.createElement('i'); ic.className = 'tl-ico fa-solid ml-auto text-[10px]'; nav.appendChild(ic); }
+            const open = tlUnlocked.has(id);
+            ic.classList.toggle('fa-lock', !open); ic.classList.toggle('fa-lock-open', open);
+            ic.classList.toggle('text-amber-400', !open); ic.classList.toggle('text-emerald-400', open);
+        });
+        const anyOpen = active && (cfg.tabs || []).some(t => tlUnlocked.has(t));
+        const b = tlEl('tlLockNowBtn'); if (b) b.classList.toggle('hidden', !anyOpen);
+    }
+
+    /* ---- Settings card ---- */
+    function tlRenderSettings() {
+        const list = tlEl('tlTabList'); if (!list) return;
+        const cfg = tlCfg(), set = tlHasPin(), tabs = cfg.tabs || [];
+        list.innerHTML = TL_TABS.map(([id, label]) => `<label class="flex items-center gap-2 bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-sm text-slate-200 cursor-pointer"><input type="checkbox" class="tl-chk accent-sky-500" value="${id}" ${tabs.includes(id) ? 'checked' : ''}> ${label}</label>`).join('');
+        const st = tlEl('tlStatus');
+        st.textContent = !set ? 'No access PIN set.' : tabs.length ? `${tabs.length} tab(s) locked.` : 'Access PIN is set, but no tabs are locked.';
+        st.className = 'font-semibold ' + (set && tabs.length ? 'text-emerald-400' : 'text-amber-400');
+        tlEl('tlCurWrap').classList.toggle('hidden', !set);
+        tlEl('tlRemoveBtn').classList.toggle('hidden', !set);
+        tlEl('tlNewLbl').textContent = set ? 'New PIN (leave blank to keep)' : 'Access PIN (4–8 digits)';
+        tlRefreshUi();
+    }
+    function tlClearInputs() { ['tlCur', 'tlNew', 'tlNew2'].forEach(id => { tlEl(id).value = ''; }); }
+    function tlSave() {
+        const tabs = [...document.querySelectorAll('.tl-chk:checked')].map(c => c.value);
+        const n1 = tlEl('tlNew').value, n2 = tlEl('tlNew2').value, set = tlHasPin();
+        if (set && !tlMatches(tlEl('tlCur').value)) { showNotification('Current access PIN is incorrect.', 'error'); return; }
+        let hash = tlCfg().pinHash;
+        if (!set || n1 || n2) {
+            if (!set && !tabs.length && !n1) { showNotification('Tick at least one tab and set an access PIN.', 'error'); return; }
+            if (!/^\d{4,8}$/.test(n1)) { showNotification('Access PIN must be 4 to 8 digits.', 'error'); return; }
+            if (n1 !== n2) { showNotification('The two PINs do not match.', 'error'); return; }
+            hash = pinHash(n1);
+        }
+        tlSetCfg(hash, tabs);
+        tlUnlocked = new Set([currentTab]);   // never lock the person out of the tab they are using
+        tlClearInputs(); saveState();
+        showNotification(tabs.length ? 'Tab locks saved.' : 'Access PIN saved. No tabs are locked.');
+    }
+    function tlRemoveAll() {
+        if (!tlMatches(tlEl('tlCur').value)) { showNotification('Enter the current access PIN to remove the locks.', 'error'); return; }
+        tlSetCfg('', []); tlUnlocked = new Set(); tlClearInputs(); saveState();
+        showNotification('All tab locks and the access PIN were removed.');
+    }
+    </script>
+
+    <script>
+    /* ---------- Light / dark mode toggle ---------- */
+    function applyTheme(t, save) {
+        const light = t === 'light';
+        document.documentElement.classList.toggle('light', light);
+        if (save) { try { localStorage.setItem('fueltrack_theme', t); } catch (e) {} }
+        const meta = document.querySelector('meta[name="theme-color"]'); if (meta) meta.setAttribute('content', light ? '#f1f5f9' : '#0f172a');
+        const ic = document.getElementById('themeToggleIcon'), lb = document.getElementById('themeToggleLabel'), bt = document.getElementById('themeToggleBtn');
+        if (ic) ic.className = 'fa-solid ' + (light ? 'fa-moon' : 'fa-sun');
+        if (lb) lb.textContent = light ? 'Dark mode' : 'Light mode';
+        if (bt) bt.setAttribute('aria-label', light ? 'Switch to dark mode' : 'Switch to light mode');
+        // charts take their text/grid colours when drawn, so redraw the visible ones
+        try {
+            if (currentTab === 'dashboard') renderDashboardChart();
+            else if (currentTab === 'reports') renderReports();
+            else if (currentTab === 'reconciliation') renderAnalyticsCharts();
+        } catch (e) {}
+    }
+    function toggleTheme() { applyTheme(isLightTheme() ? 'dark' : 'light', true); }
+    document.addEventListener('DOMContentLoaded', () => applyTheme(isLightTheme() ? 'light' : 'dark', false));
+    </script>
+
+    <script>
+    /* =====================================================================
+       FUEL PURCHASES  -  supplier accounts (credit period / instant pay)
+       Spreadsheet-style ledger modelled on FUEL_LEGER_2026.xlsx:
+       ORDER DATE | RECEIVED DATE | PAYMENT DUE DATE | DESCRIPTION | DR | CR | BALANCE
+       DR = purchase invoiced by supplier, CR = payment made to supplier.
+       Balance = previous balance + DR - CR  (positive = we owe the supplier).
+       ===================================================================== */
+    let fpSelected = null, fpModalId = null;
+    try { fpSelected = localStorage.getItem('fp_selected_supplier') || null; } catch (e) {}
+    const FP_LAST_COL = 5;   // editable columns 0..5 = order, received, due, description, DR, CR
+
+    function fpData() {
+        let d = appState.fuelPurchases;
+        if (!d || typeof d !== 'object') d = appState.fuelPurchases = { suppliers: [], entries: [] };
+        if (!Array.isArray(d.suppliers)) d.suppliers = [];
+        if (!Array.isArray(d.entries)) d.entries = [];
+        if (!d.v2) {   // v2: the old "order date" is now the invoice date
+            d.suppliers.forEach(x => { if (x.from === 'order') x.from = 'invoice'; });
+            d.entries.forEach(e => { if (e.order !== undefined) { if (!e.inv) e.inv = e.order; delete e.order; } if (e.t && e.t.f === 'order') e.t.f = 'invoice'; });
+            d.v2 = true;
+        }
+        return d;
+    }
+    const fpUid = () => 'fp' + Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
+    const fpEl = id => document.getElementById(id);
+    function fpSupplier(id) { return fpData().suppliers.find(s => s.id === id); }
+    function fpEntries(sid) { return fpData().entries.filter(e => e.sid === sid); }
+
+    /* ---------- dates & money ---------- */
+    function fpIso(y, m, d) {
+        const dt = new Date(Date.UTC(y, m - 1, d));
+        if (dt.getUTCFullYear() !== y || dt.getUTCMonth() !== m - 1 || dt.getUTCDate() !== d) return null;
+        return dt.toISOString().slice(0, 10);
+    }
+    // '' = empty, null = not a valid date, otherwise ISO yyyy-mm-dd. Day comes before month (20/01/2026 = 20 Jan).
+    function fpParseDate(s) {
+        s = String(s ?? '').trim().replace(/[ T]\d{1,2}:\d{2}(:\d{2})?.*$/, '');
+        if (!s) return '';
+        if (/^t(oday)?$/i.test(s)) return localDateStr();
+        let m = s.match(/^(\d{4})-(\d{1,2})-(\d{1,2})$/);
+        if (m) return fpIso(+m[1], +m[2], +m[3]);
+        m = s.match(/^(\d{1,2})[\/\-.](\d{1,2})(?:[\/\-.](\d{2}|\d{4}))?$/);
+        if (m) { let y = m[3] ? +m[3] : new Date().getFullYear(); if (m[3] && m[3].length === 2) y += 2000; return fpIso(y, +m[2], +m[1]); }
+        return null;
+    }
+    function fpFmtDate(iso) { return iso && /^\d{4}-\d{2}-\d{2}$/.test(iso) ? `${iso.slice(8, 10)}/${iso.slice(5, 7)}/${iso.slice(0, 4)}` : ''; }
+    function fpAdd(iso, n) { const d = new Date(iso + 'T00:00:00Z'); d.setUTCDate(d.getUTCDate() + n); return d.toISOString().slice(0, 10); }
+    function fpDiff(a, b) { return Math.round((new Date(a + 'T00:00:00Z') - new Date(b + 'T00:00:00Z')) / 86400000); }
+    // '' = empty, null = invalid. Accepts 1,234.50 and simple sums like =700000+106110 (as in the Excel ledger).
+    function fpParseMoney(s) {
+        s = String(s ?? '').replace(/GH₵|GHS|₵/gi, '').replace(/[,\s]/g, '').replace(/^=/, '');
+        if (s === '') return '';
+        if (!/^[0-9+\-*/().]+$/.test(s)) return null;
+        try { const v = Function('"use strict";return (' + s + ')')(); return (typeof v === 'number' && isFinite(v)) ? r2(v) : null; } catch (e) { return null; }
+    }
+    const fpNum = v => (v === null || v === undefined || v === '' || Number(v) === 0) ? '' : Number(v).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+    /* ---------- supplier terms ---------- */
+    function fpTerms(s) {
+        return s.mode === 'instant' ? { m: 'instant', d: 0, f: s.from || 'received' }
+            : { m: 'credit', d: Math.max(0, Math.round(+s.days || 0)), f: s.from || 'received' };
+    }
+    function fpTermsLabel(s) {
+        const t = fpTerms(s);
+        if (t.m === 'instant') return 'Instant pay (no credit)';
+        return `${t.d} day${t.d === 1 ? '' : 's'} credit` + (t.f === 'invoice' ? ' from invoice date' : '');
+    }
+    const fpIsOpening = e => /^\s*balance\s*b\s*\/?\s*f/i.test(e.desc || '');
+    function fpAutoDue(e) {
+        if (!(+e.dr > 0) || fpIsOpening(e)) return '';
+        const t = e.t || { m: 'credit', d: 0, f: 'received' };
+        const base = t.f === 'invoice' ? (e.inv || e.recv) : (e.recv || e.inv);
+        return base ? fpAdd(base, t.m === 'instant' ? 0 : (t.d || 0)) : '';
+    }
+
+    /* ---------- ledger maths ---------- */
+    // Payments (CR) settle purchases (DR) oldest-first, which gives each purchase a Paid / Part-paid / Overdue status.
+    function fpCompute(sid) {
+        const ents = fpEntries(sid), today = localDateStr();
+        let pool = r2(ents.reduce((a, e) => a + (+e.cr || 0), 0));
+        let bal = 0, dr = 0, cr = 0, overdue = 0, nextDue = null;
+        const rows = ents.map(e => {
+            const d = +e.dr || 0, c = +e.cr || 0;
+            bal = r2(bal + d - c); dr += d; cr += c;
+            const due = e.due || fpAutoDue(e);
+            let status = '', cls = '', remaining = 0;
+            if (d > 0) {
+                const alloc = Math.min(pool, d); pool = r2(pool - alloc); remaining = r2(d - alloc);
+                const part = remaining > 0 && remaining < d ? ` · ${fmt(remaining, 2)} left` : '';
+                if (remaining <= 0) { status = 'Paid'; cls = 'text-emerald-400'; }
+                else if (!due) { status = (part ? 'Part-paid' : 'Unpaid') + part; cls = 'text-amber-300'; }
+                else {
+                    const diff = fpDiff(due, today);
+                    if (diff < 0) { status = `Overdue ${-diff}d` + part; cls = 'text-rose-400 font-semibold'; overdue = r2(overdue + remaining); }
+                    else if (diff === 0) { status = 'Due today' + part; cls = 'text-amber-300 font-semibold'; }
+                    else { status = `Due in ${diff}d` + part; cls = 'text-sky-300'; }
+                }
+            }
+            const auto = status;
+            if (d > 0 && e.status) {
+                const m = e.status, held = m === 'Paid' || m === 'On hold' || m === 'Disputed';
+                if (held) {   // manual status: leave it out of overdue / next-due figures
+                    if (remaining > 0 && due) { if (due < today) overdue = r2(overdue - remaining); }
+                    status = m; cls = m === 'Paid' ? 'text-emerald-400' : m === 'Disputed' ? 'text-rose-300' : 'text-violet-300';
+                } else if (m === 'Unpaid' || m === 'Part-paid') { status = m + (status && !/^Paid$/.test(status) ? ' · ' + status : ''); if (remaining <= 0) { remaining = d; if (due && due < today) overdue = r2(overdue + d); } }
+            }
+            return { e, bal, status, cls, remaining, due, auto };
+        });
+        rows.forEach(r => { if (+r.e.dr > 0 && r.remaining > 0 && r.due && !['Paid', 'On hold', 'Disputed'].includes(r.e.status) && (!nextDue || r.due < nextDue)) nextDue = r.due; });
+        return { rows, dr: r2(dr), cr: r2(cr), bal: r2(bal), overdue: r2(Math.max(0, overdue)), nextDue };
+    }
+
+    /* ---------- persistence (light save: no full re-render, so typing is never interrupted) ---------- */
+    function fpPersist() {
+        try { localStorage.setItem(STORAGE_KEY, JSON.stringify(appState)); } catch (e) {}
+        if (typeof Sheets !== 'undefined' && Sheets.queuePush) Sheets.queuePush();
+    }
+
+    /* ---------- rendering ---------- */
+    function fpCellInput(r, c, id, val, cls) {
+        return `<td class="${c >= 4 ? 'num ' : ''}"><input class="${cls || ''}" data-r="${r}" data-c="${c}" data-id="${id}" value="${esc(val)}" autocomplete="off" spellcheck="false"${c === 3 ? ' list="fpDescList"' : ''}${c >= 4 ? ' inputmode="decimal"' : ''}${c < 3 ? ' placeholder="dd/mm/yyyy"' : ''}></td>`;
+    }
+    function fpRowHtml(i, r) {
+        const e = r ? r.e : null, id = e ? e.id : '';
+        const due = r ? r.due : '', auto = e && !e.due && due;
+        return `<tr data-row="${i}">
+            <td class="rn">${i + 1}</td>
+            ${fpCellInput(i, 0, id, e ? fpFmtDate(e.inv) : '')}
+            ${fpCellInput(i, 1, id, e ? fpFmtDate(e.recv) : '')}
+            ${fpCellInput(i, 2, id, fpFmtDate(due), auto ? 'auto' : '')}
+            ${fpCellInput(i, 3, id, e ? (e.desc || '') : '')}
+            ${fpCellInput(i, 4, id, e ? fpNum(e.dr) : '')}
+            ${fpCellInput(i, 5, id, e ? fpNum(e.cr) : '')}
+            <td class="ro num" data-k="bal"></td><td class="ro" data-k="st"></td><td class="ro act" data-k="act"></td></tr>`;
+    }
+    function fpRenderGrid() {
+        const tb = fpEl('fpBody'); if (!tb) return;
+        if (!fpSupplier(fpSelected)) { tb.innerHTML = ''; return; }
+        const c = fpCompute(fpSelected);
+        tb.innerHTML = c.rows.map((r, i) => fpRowHtml(i, r)).join('') + fpRowHtml(c.rows.length, null);
+        const seen = {}, opts = [];
+        fpData().entries.forEach(e => { const k = (e.desc || '').trim(); if (k && !seen[k.toLowerCase()]) { seen[k.toLowerCase()] = 1; opts.push(k); } });
+        fpEl('fpDescList').innerHTML = (fpData().entries.some(e => fpIsOpening(e)) ? '' : '<option value="BALANCE B/F">') + opts.slice(0, 150).map(o => `<option value="${esc(o)}">`).join('');
+        fpUpdateDerived(c);
+    }
+    // Refresh balance / status / auto due date cells in place.
+    function fpUpdateDerived(c) {
+        const tb = fpEl('fpBody'); if (!tb || !fpSupplier(fpSelected)) return;
+        c = c || fpCompute(fpSelected);
+        c.rows.forEach((r, i) => {
+            const tr = tb.rows[i]; if (!tr) return;
+            const e = r.e;
+            const set = (k, html) => { const td = tr.querySelector(`[data-k="${k}"]`); if (td) td.innerHTML = html; };
+            const hasAmt = (+e.dr || +e.cr);
+            set('bal', hasAmt ? `<span class="${r.bal > 0 ? 'text-amber-300' : r.bal < 0 ? 'text-emerald-300' : 'text-slate-400'}">${r.bal < 0 ? '-' : ''}${fpNum(Math.abs(r.bal)) || '0.00'}</span>` : '');
+            set('st', +e.dr > 0 ? fpStatusSelect(e, r) : (+e.cr > 0 ? '<span class="text-emerald-500/70">Payment</span>' : ''));
+            set('act', `<button type="button" onclick="fpInsertBelow('${e.id}')" title="Insert row below" class="text-slate-500 hover:text-sky-400 px-1"><i class="fa-solid fa-plus"></i></button><button type="button" onclick="fpDeleteRow('${e.id}')" title="Delete row" class="text-slate-500 hover:text-rose-400 px-1"><i class="fa-solid fa-trash-can"></i></button>`);
+            tr.querySelectorAll('input').forEach(inp => { inp.dataset.id = e.id; });
+            tr.classList.toggle('fp-pay', +e.cr > 0 && !(+e.dr > 0));
+            tr.classList.toggle('fp-open', fpIsOpening(e));
+            const dueInp = tr.querySelector('input[data-c="2"]');
+            if (dueInp && document.activeElement !== dueInp) { dueInp.value = fpFmtDate(r.due); dueInp.classList.toggle('auto', !e.due && !!r.due); }
+        });
+    }
+    const FP_STATUSES = ['Unpaid', 'Part-paid', 'Paid', 'On hold', 'Disputed'];
+    function fpStatusSelect(e, r) {
+        const man = e.status || '';
+        return `<select onchange="fpSetStatus('${e.id}', this.value)" title="Choose a status, or Auto to let the ledger work it out" class="fp-status ${r.cls}">` +
+            `<option value=""${man ? '' : ' selected'}>Auto: ${esc(r.auto || '-')}</option>` +
+            FP_STATUSES.map(o => `<option value="${o}"${man === o ? ' selected' : ''}>${o}</option>`).join('') + '</select>';
+    }
+    function fpSetStatus(id, v) {
+        const e = fpData().entries.find(x => x.id === id); if (!e) return;
+        if (v) e.status = v; else delete e.status;
+        fpPersist(); fpUpdateDerived(); fpRenderTop();
+    }
+    function fpRenderTop() {
+        const d = fpData();
+        if (!fpSupplier(fpSelected)) { fpSelected = d.suppliers[0] ? d.suppliers[0].id : null; }
+        const none = !d.suppliers.length;
+        fpEl('fpNoSupplier').classList.toggle('hidden', !none);
+        fpEl('fpSummaryWrap').classList.toggle('hidden', none);
+        fpEl('fpLedgerCard').classList.toggle('hidden', none);
+        let totOut = 0, totOver = 0, totDr = 0, totCr = 0;
+        const rows = d.suppliers.map(s => {
+            const c = fpCompute(s.id); totOut += c.bal; totOver += c.overdue; totDr += c.dr; totCr += c.cr;
+            const t = fpTerms(s);
+            return `<tr class="hover:bg-slate-800/40 cursor-pointer ${s.id === fpSelected ? 'bg-sky-500/5' : ''}" onclick="fpSelect('${s.id}')">
+                <td class="py-2.5 px-3 font-semibold text-white">${esc(s.name)}</td>
+                <td class="py-2.5 px-3"><span class="px-2 py-0.5 rounded-full text-[11px] font-semibold ${t.m === 'instant' ? 'bg-violet-500/15 text-violet-300 border border-violet-500/30' : 'bg-sky-500/15 text-sky-300 border border-sky-500/30'}">${esc(fpTermsLabel(s))}</span></td>
+                <td class="py-2.5 px-3 text-right">${money(c.dr)}</td><td class="py-2.5 px-3 text-right">${money(c.cr)}</td>
+                <td class="py-2.5 px-3 text-right font-semibold ${c.bal > 0 ? 'text-amber-300' : c.bal < 0 ? 'text-emerald-300' : 'text-slate-300'}">${money(c.bal)}</td>
+                <td class="py-2.5 px-3 text-right ${c.overdue > 0 ? 'text-rose-400 font-semibold' : 'text-slate-500'}">${money(c.overdue)}</td>
+                <td class="py-2.5 px-3 ${c.nextDue && c.nextDue < localDateStr() ? 'text-rose-400' : 'text-slate-300'}">${c.nextDue ? fpFmtDate(c.nextDue) : '--'}</td></tr>`;
+        });
+        fpEl('fpSummaryBody').innerHTML = rows.join('');
+        fpEl('fpSummaryFoot').innerHTML = d.suppliers.length > 1 ? `<tr class="font-bold text-white"><td class="py-2.5 px-3" colspan="2">TOTAL</td><td class="py-2.5 px-3 text-right">${money(totDr)}</td><td class="py-2.5 px-3 text-right">${money(totCr)}</td><td class="py-2.5 px-3 text-right text-amber-300">${money(totOut)}</td><td class="py-2.5 px-3 text-right text-rose-400">${money(totOver)}</td><td></td></tr>` : '';
+        const nb = fpEl('navPurchasesBadge');
+        if (nb) { const n = d.suppliers.filter(s => fpCompute(s.id).overdue > 0).length; nb.textContent = n; nb.classList.toggle('hidden', !n); }
+        const sel = fpEl('fpSupplierSel');
+        if (sel) sel.innerHTML = d.suppliers.map(s => `<option value="${s.id}" ${s.id === fpSelected ? 'selected' : ''}>${esc(s.name)}</option>`).join('');
+        const s = fpSupplier(fpSelected);
+        if (s) {
+            const c = fpCompute(s.id), t = fpTerms(s);
+            fpEl('fpTermsBadge').innerHTML = `<i class="fa-solid ${t.m === 'instant' ? 'fa-bolt' : 'fa-calendar-days'} mr-1"></i>${esc(fpTermsLabel(s))}`;
+            fpEl('fpTermsBadge').className = 'px-2.5 py-1 rounded-full text-xs font-semibold border ' + (t.m === 'instant' ? 'bg-violet-500/15 text-violet-300 border-violet-500/30' : 'bg-sky-500/15 text-sky-300 border-sky-500/30');
+            const k = (l, v, cl) => `<div class="bg-slate-950 border border-slate-800 rounded-xl px-3 py-2"><p class="text-[10px] uppercase tracking-wider text-slate-500 font-semibold">${l}</p><p class="text-sm font-bold ${cl || 'text-white'}">${v}</p></div>`;
+            fpEl('fpKpis').innerHTML = k('Total purchases (DR)', money(c.dr)) + k('Total paid (CR)', money(c.cr)) +
+                k(c.bal < 0 ? 'Advance / credit' : 'Balance owed', money(Math.abs(c.bal)), c.bal > 0 ? 'text-amber-300' : 'text-emerald-300') +
+                k('Overdue', money(c.overdue), c.overdue > 0 ? 'text-rose-400' : 'text-slate-300') +
+                k('Earliest unpaid due', c.nextDue ? fpFmtDate(c.nextDue) : '--', c.nextDue && c.nextDue < localDateStr() ? 'text-rose-400' : 'text-white');
+            fpEl('fpPrintTitle').textContent = `Fuel purchases ledger: ${s.name} (${fpTermsLabel(s)}) - printed ${new Date().toLocaleString()}`;
+        }
+    }
+    function renderPurchases() {
+        if (!fpEl('fpBody')) return;
+        fpRenderTop();
+        const a = document.activeElement;
+        if (!(a && a.closest && a.closest('#fpBody'))) fpRenderGrid();   // never rebuild while the user is typing in the grid
+    }
+    function fpSelect(id) {
+        fpSelected = id; try { localStorage.setItem('fp_selected_supplier', id); } catch (e) {}
+        fpRenderTop(); fpRenderGrid();
+        fpEl('fpLedgerCard').scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+
+    /* ---------- cell editing ---------- */
+    function fpNewEntry(sid) {
+        const s = fpSupplier(sid);
+        return { id: fpUid(), sid, inv: '', recv: '', due: '', desc: '', dr: null, cr: null, t: fpTerms(s || {}) };
+    }
+    // returns 'ok' | 'same' | 'bad'
+    function fpApply(e, c, txt) {
+        txt = String(txt ?? '').trim();
+        if (c <= 2) {
+            const v = fpParseDate(txt); if (v === null) return 'bad';
+            if (c === 2) { const nv = (v === fpAutoDue(e)) ? '' : v; if ((e.due || '') === nv) return 'same'; e.due = nv; return 'ok'; }
+            const k = c === 0 ? 'inv' : 'recv';
+            if ((e[k] || '') === v) return 'same'; e[k] = v; return 'ok';
+        }
+        if (c === 3) { if ((e.desc || '') === txt) return 'same'; e.desc = txt; return 'ok'; }
+        const m = fpParseMoney(txt); if (m === null) return 'bad';
+        const nv = m === '' || m === 0 ? null : m, k = c === 4 ? 'dr' : 'cr';
+        if ((e[k] ?? null) === nv) return 'same'; e[k] = nv; return 'ok';
+    }
+    function fpRefreshCell(t, e) {
+        const c = +t.dataset.c;
+        if (!e) { t.value = ''; return; }
+        t.value = c === 0 ? fpFmtDate(e.inv) : c === 1 ? fpFmtDate(e.recv) : c === 2 ? fpFmtDate(e.due || fpAutoDue(e)) : c === 3 ? (e.desc || '') : c === 4 ? fpNum(e.dr) : fpNum(e.cr);
+        if (c === 2) t.classList.toggle('auto', !e.due && !!fpAutoDue(e));
+    }
+    function fpCommit(t) {
+        if (!t || !t.dataset || t.dataset.c === undefined || !fpSupplier(fpSelected)) return;
+        const c = +t.dataset.c, d = fpData();
+        let e = t.dataset.id ? d.entries.find(x => x.id === t.dataset.id) : null, created = false;
+        if (!e) {
+            if (!t.value.trim()) return;
+            e = fpNewEntry(fpSelected); created = true;
+        }
+        const res = fpApply(e, c, t.value);
+        if (res === 'bad') {
+            showNotification(c <= 2 ? 'Not a valid date. Use dd/mm/yyyy (or type T for today).' : 'Not a valid amount.', 'error');
+            fpRefreshCell(t, created ? null : e); return;
+        }
+        if (res === 'same') { fpRefreshCell(t, created ? null : e); return; }
+        if (created) {
+            d.entries.push(e);
+            const tr = t.closest('tr'); tr.querySelectorAll('input').forEach(i => { i.dataset.id = e.id; });
+            fpEl('fpBody').insertAdjacentHTML('beforeend', fpRowHtml(+tr.dataset.row + 1, null));
+        }
+        fpPersist();
+        fpRefreshCell(t, e);
+        fpUpdateDerived(); fpRenderTop();
+    }
+    function fpFocus(r, c) {
+        const el = fpEl('fpBody').querySelector(`input[data-r="${r}"][data-c="${c}"]`);
+        if (el) { el.focus(); el.select(); el.scrollIntoView({ block: 'nearest', inline: 'nearest' }); }
+    }
+    function fpInsertBelow(id) {
+        const d = fpData(), i = d.entries.findIndex(x => x.id === id); if (i < 0) return;
+        const e = fpNewEntry(d.entries[i].sid); d.entries.splice(i + 1, 0, e);
+        fpPersist(); fpRenderGrid(); fpRenderTop();
+        const row = fpEntries(fpSelected).findIndex(x => x.id === e.id);
+        fpFocus(row, 0);
+    }
+    function fpDeleteRow(id) {
+        const d = fpData(), i = d.entries.findIndex(x => x.id === id); if (i < 0) return;
+        const e = d.entries[i];
+        if ((e.desc || e.dr || e.cr) && !confirm('Delete this ledger row?' + (e.desc ? '\n\n' + e.desc : ''))) return;
+        d.entries.splice(i, 1);
+        fpPersist(); fpRenderGrid(); fpRenderTop();
+    }
+    function fpPaste(ev) {
+        const t = ev.target; if (!t.matches || !t.matches('input[data-c]')) return;
+        const txt = (ev.clipboardData || window.clipboardData).getData('text');
+        if (!/[\t\n]/.test(txt.replace(/\r?\n$/, ''))) return;   // one cell: normal paste
+        ev.preventDefault();
+        const lines = txt.replace(/\r/g, '').split('\n'); while (lines.length && lines[lines.length - 1] === '') lines.pop();
+        const sid = fpSelected, d = fpData(), ents = fpEntries(sid), r0 = +t.dataset.r, c0 = +t.dataset.c;
+        let bad = 0, rowsDone = 0;
+        lines.forEach((ln, i) => {
+            const cells = ln.split('\t');
+            let e = ents[r0 + i];
+            if (!e) { if (cells.every(x => !x.trim())) return; e = fpNewEntry(sid); d.entries.push(e); ents.push(e); }
+            cells.forEach((cx, j) => { const c = c0 + j; if (c <= FP_LAST_COL && fpApply(e, c, cx) === 'bad') bad++; });
+            rowsDone++;
+        });
+        fpPersist(); fpRenderGrid(); fpRenderTop();
+        showNotification(`Pasted ${rowsDone} row(s)` + (bad ? `; ${bad} cell(s) were not valid and were skipped.` : '.'), bad ? 'error' : undefined);
+    }
+    function fpInitGrid() {
+        const tb = fpEl('fpBody'); if (!tb || tb.dataset.ready) return; tb.dataset.ready = '1';
+        tb.addEventListener('focusin', ev => {
+            const t = ev.target; if (!t.dataset || t.dataset.c === undefined) return;
+            const c = +t.dataset.c;
+            if (c >= 4 && t.dataset.id) { const e = fpData().entries.find(x => x.id === t.dataset.id); const v = e ? e[c === 4 ? 'dr' : 'cr'] : null; t.value = v ? String(v) : ''; }
+            t.dataset.orig = t.value; setTimeout(() => { try { if (document.activeElement === t && t.value === t.dataset.orig) t.select(); } catch (e) {} }, 0);
+        });
+        tb.addEventListener('change', ev => fpCommit(ev.target));
+        tb.addEventListener('focusout', ev => {
+            const t = ev.target; if (!t.dataset || t.dataset.c === undefined) return;
+            const e = t.dataset.id ? fpData().entries.find(x => x.id === t.dataset.id) : null;
+            if (e) fpRefreshCell(t, e);
+        });
+        tb.addEventListener('paste', fpPaste);
+        tb.addEventListener('keydown', ev => {
+            const t = ev.target; if (!t.dataset || t.dataset.c === undefined) return;
+            const r = +t.dataset.r, c = +t.dataset.c, len = t.value.length, ss = t.selectionStart, se = t.selectionEnd, all = ss === 0 && se === len;
+            let nr = r, nc = c;
+            if (ev.key === 'Enter') nr = r + (ev.shiftKey ? -1 : 1);
+            else if (ev.key === 'Tab') { nc = c + (ev.shiftKey ? -1 : 1); if (nc > FP_LAST_COL) { nc = 0; nr = r + 1; } if (nc < 0) { nc = FP_LAST_COL; nr = r - 1; } }
+            else if (ev.key === 'ArrowDown') nr = r + 1;
+            else if (ev.key === 'ArrowUp') nr = r - 1;
+            else if (ev.key === 'ArrowRight' && (all || ss === len)) { nc = c + 1; if (nc > FP_LAST_COL) return; }
+            else if (ev.key === 'ArrowLeft' && (all || se === 0)) { nc = c - 1; if (nc < 0) return; }
+            else if (ev.key === 'Escape') { t.value = t.dataset.orig ?? ''; t.blur(); return; }
+            else return;
+            if (nr < 0) { ev.preventDefault(); return; }
+            ev.preventDefault();
+            fpCommit(t); fpFocus(nr, nc);
+        });
+    }
+
+    /* ---------- supplier setup (credit days or instant pay) ---------- */
+    function fpModeChanged() {
+        const credit = fpEl('fpModeCredit').checked;
+        fpEl('fpCreditBox').classList.toggle('hidden', !credit);
+    }
+    function fpOpenSupplier(id) {
+        fpModalId = id || null;
+        const s = id ? fpSupplier(id) : null;
+        fpEl('fpModalTitle').textContent = s ? 'Edit supplier & payment terms' : 'Add supplier';
+        fpEl('fpSupName').value = s ? s.name : '';
+        fpEl('fpModeCredit').checked = s ? s.mode !== 'instant' : true;
+        fpEl('fpModeInstant').checked = s ? s.mode === 'instant' : false;
+        fpEl('fpSupDays').value = s ? (s.days ?? 30) : 30;
+        fpEl('fpSupFrom').value = s ? (s.from === 'invoice' ? 'invoice' : 'received') : 'received';
+        fpEl('fpSupNotes').value = s ? (s.notes || '') : '';
+        fpEl('fpSupDelete').classList.toggle('hidden', !s);
+        fpModeChanged();
+        fpEl('fpSupplierModal').classList.remove('hidden');
+        setTimeout(() => fpEl('fpSupName').focus(), 50);
+    }
+    function fpCloseSupplier() { fpEl('fpSupplierModal').classList.add('hidden'); }
+    function fpSaveSupplier(ev) {
+        ev.preventDefault();
+        const d = fpData(), name = fpEl('fpSupName').value.trim();
+        if (!name) { showNotification('Enter the supplier name.', 'error'); return; }
+        if (d.suppliers.some(s => s.id !== fpModalId && normKey(s.name) === normKey(name))) { showNotification('A supplier with this name already exists.', 'error'); return; }
+        const credit = fpEl('fpModeCredit').checked;
+        let days = Math.round(Number(fpEl('fpSupDays').value));
+        if (credit && (!isFinite(days) || days < 1 || days > 365)) { showNotification('Credit days must be between 1 and 365.', 'error'); return; }
+        const rec = { name, mode: credit ? 'credit' : 'instant', days: credit ? days : 0, from: fpEl('fpSupFrom').value, notes: fpEl('fpSupNotes').value.trim() };
+        let s = fpModalId ? fpSupplier(fpModalId) : null;
+        if (s) {
+            const before = JSON.stringify(fpTerms(s));
+            Object.assign(s, rec);
+            const after = fpTerms(s);
+            if (before !== JSON.stringify(after) && fpEntries(s.id).some(e => +e.dr > 0) &&
+                confirm('Payment terms changed.\n\nOK = also apply the new terms to the existing purchases of this supplier (manually typed due dates are kept).\nCancel = new terms only apply to purchases entered from now on.')) {
+                fpEntries(s.id).forEach(e => { e.t = after; });
+            }
+        } else {
+            s = { id: fpUid(), ...rec }; d.suppliers.push(s);
+        }
+        fpSelected = s.id; try { localStorage.setItem('fp_selected_supplier', s.id); } catch (e) {}
+        fpPersist(); fpCloseSupplier(); fpRenderTop(); fpRenderGrid();
+        showNotification('Supplier saved.');
+    }
+    function fpDeleteSupplier() {
+        const s = fpSupplier(fpModalId); if (!s) return;
+        const n = fpEntries(s.id).length;
+        if (!confirm(`Delete supplier "${s.name}"${n ? ` and its ${n} ledger row(s)` : ''}? This cannot be undone.`)) return;
+        const d = fpData();
+        d.suppliers = d.suppliers.filter(x => x.id !== s.id); d.entries = d.entries.filter(e => e.sid !== s.id);
+        if (fpSelected === s.id) fpSelected = d.suppliers[0] ? d.suppliers[0].id : null;
+        fpPersist(); fpCloseSupplier(); fpRenderTop(); fpRenderGrid();
+    }
+    function fpEditCurrent() { if (fpSelected) fpOpenSupplier(fpSelected); }
+
+    /* ---------- import deliveries from Stock Received (uses the invoice date entered there) ---------- */
+    function fpImportReceived() {
+        const s = fpSupplier(fpSelected); if (!s) return;
+        const d = fpData(), have = new Set(d.entries.map(e => e.rid).filter(Boolean));
+        const list = (appState.receiveLogs || []).filter(l => normKey(l.supplier) === normKey(s.name) && !have.has(l.id))
+            .sort((a, b) => String(a.date).localeCompare(String(b.date)));
+        if (!list.length) { showNotification(`No new deliveries from "${s.name}" in Stock Received. The names must match the supplier name.`, 'error'); return; }
+        if (!confirm(`Add ${list.length} delivery record(s) from Stock Received for ${s.name}?\n\nInvoice date and received date are copied; the amount is filled in only where a unit price was entered.`)) return;
+        list.forEach(l => {
+            const e = fpNewEntry(s.id), cost = receiptCost(l);
+            e.inv = (String(l.invoiceDate || '').match(/^\d{4}-\d{2}-\d{2}/) || [''])[0];
+            e.recv = String(l.date || '').slice(0, 10);
+            e.desc = `${String(l.fuelType || '').toUpperCase()} ${l.quantity}`.trim();
+            e.dr = cost ? r2(cost) : null; e.rid = l.id;
+            d.entries.push(e);
+        });
+        fpPersist(); fpRenderGrid(); fpRenderTop();
+        showNotification(`${list.length} delivery record(s) added.`);
+    }
+
+    /* ---------- clear ledger records (same PIN logic as the other clear functions) ---------- */
+    function fpClearScopeEntries(scope) {
+        const d = fpData();
+        return scope === 'ALL' ? d.entries.slice() : d.entries.filter(e => e.sid === scope);
+    }
+    function fpExportEntryRows(entries, name) {
+        const d = fpData();
+        downloadCsv(name, [
+            ['Supplier', 'Invoice date', 'Received date', 'Payment due date', 'Description', 'DR (purchase)', 'CR (payment)', 'Manual status'],
+            ...entries.map(e => { const s = fpSupplier(e.sid);
+                return [s ? s.name : '', fpFmtDate(e.inv), fpFmtDate(e.recv), fpFmtDate(e.due || fpAutoDue(e)), e.desc || '', e.dr ?? '', e.cr ?? '', e.status || '']; }),
+            ['TOTAL', '', '', '', '', r2(entries.reduce((a, e) => a + (+e.dr || 0), 0)), r2(entries.reduce((a, e) => a + (+e.cr || 0), 0)), '']
+        ]);
+    }
+    function fpOpenClear() {
+        const d = fpData();
+        if (!d.entries.length) { showNotification('There are no purchase ledger records to clear.', 'error'); return; }
+        const cur = fpSupplier(fpSelected);
+        let opts = '';
+        if (cur) opts += `<option value="${cur.id}">This supplier only: ${esc(cur.name)}</option>`;
+        opts += '<option value="ALL">All suppliers (every ledger)</option>';
+        d.suppliers.forEach(s => { if (!cur || s.id !== cur.id) opts += `<option value="${s.id}">${esc(s.name)} only</option>`; });
+        fpEl('fpClrScope').innerHTML = opts;
+        fpEl('fpClrScope').value = cur ? cur.id : 'ALL';
+        fpEl('fpClrWord').value = '';
+        fpEl('fpClrPin').value = '';
+        fpEl('fpClrPinNote').classList.add('hidden');
+        fpEl('fpClrPinWrap').classList.toggle('hidden', !pinIsSet());
+        fpRenderClearSummary();
+        fpEl('fpClearModal').classList.remove('hidden');
+    }
+    function fpCloseClear() { fpEl('fpClearModal').classList.add('hidden'); }
+    function fpRenderClearSummary() {
+        const list = fpClearScopeEntries(fpEl('fpClrScope').value);
+        const dr = r2(list.reduce((a, e) => a + (+e.dr || 0), 0)), cr = r2(list.reduce((a, e) => a + (+e.cr || 0), 0));
+        fpEl('fpClrSummary').innerHTML = list.length
+            ? `<p>This permanently deletes <strong>${list.length}</strong> ledger row(s): purchases (DR) <strong>${money(dr)}</strong> and payments (CR) <strong>${money(cr)}</strong>.</p>
+               `
+            : '<p class="text-amber-300 text-xs">There are no ledger records for this selection.</p>';
+        fpValidateClear();
+    }
+    function fpValidateClear() {
+        const has = fpClearScopeEntries(fpEl('fpClrScope').value).length > 0;
+        const ok = has && fpEl('fpClrWord').value.trim().toUpperCase() === 'CLEAR' && (!pinIsSet() || fpEl('fpClrPin').value !== '');
+        fpEl('fpClrBtn').disabled = !ok;
+        return ok;
+    }
+    function fpClearRecords() {
+        if (!fpValidateClear()) return;
+        if (pinIsSet() && !pinMatches(fpEl('fpClrPin').value)) {
+            const n = fpEl('fpClrPinNote'); n.textContent = 'Incorrect PIN.'; n.classList.remove('hidden'); return;
+        }
+        const scope = fpEl('fpClrScope').value, removed = fpClearScopeEntries(scope), d = fpData();
+        if (fpEl('fpClrBackup').checked && removed.length) fpExportEntryRows(removed, `fuel_purchases_BACKUP_${localDateStr()}.csv`);
+        const gone = new Set(removed);
+        d.entries = d.entries.filter(e => !gone.has(e));
+        fpPersist(); fpCloseClear(); fpRenderTop(); fpRenderGrid();
+        showNotification(`${removed.length} purchase ledger record(s) cleared.`);
+    }
+
+    /* ---------- export ---------- */
+    function fpExportExcel() {
+        const d = fpData();
+        if (!d.suppliers.length) { showNotification('No suppliers to export.', 'error'); return; }
+        if (typeof XLSX === 'undefined') { showNotification('Excel library not loaded. Check your internet connection.', 'error'); return; }
+        const wb = XLSX.utils.book_new(), used = {};
+        const sum = [['SUPPLIER', 'PAYMENT TERMS', 'TOTAL PURCHASES (DR)', 'TOTAL PAID (CR)', 'BALANCE OWED', 'OVERDUE', 'EARLIEST UNPAID DUE']];
+        d.suppliers.forEach(s => { const c = fpCompute(s.id); sum.push([s.name, fpTermsLabel(s), c.dr, c.cr, c.bal, c.overdue, fpFmtDate(c.nextDue)]); });
+        const ws0 = XLSX.utils.aoa_to_sheet(sum); ws0['!cols'] = [{ wch: 28 }, { wch: 26 }, { wch: 20 }, { wch: 16 }, { wch: 16 }, { wch: 14 }, { wch: 20 }];
+        XLSX.utils.book_append_sheet(wb, ws0, 'SUMMARY');
+        d.suppliers.forEach(s => {
+            const c = fpCompute(s.id);
+            const aoa = [['INVOICE DATE', 'RECEIVED DATE', 'PAYMENT DUE DATE', 'DESCRIPTION', 'DR', 'CR', 'BALANCE', 'STATUS']];
+            c.rows.forEach(r => aoa.push([fpFmtDate(r.e.inv), fpFmtDate(r.e.recv), fpFmtDate(r.due), r.e.desc || '', r.e.dr ?? null, r.e.cr ?? null, null, r.status + (r.e.status ? ' (manual)' : '')]));
+            const ws = XLSX.utils.aoa_to_sheet(aoa);
+            c.rows.forEach((r, i) => {
+                const n = i + 2;
+                ws['G' + n] = { t: 'n', f: i === 0 ? `E${n}-F${n}` : `G${n - 1}+E${n}-F${n}`, v: r.bal, z: '#,##0.00' };
+                ['E', 'F'].forEach(L => { if (ws[L + n]) ws[L + n].z = '#,##0.00'; });
+            });
+            ws['!cols'] = [{ wch: 13 }, { wch: 14 }, { wch: 17 }, { wch: 38 }, { wch: 15 }, { wch: 15 }, { wch: 16 }, { wch: 22 }];
+            let nm = s.name.replace(/[\\\/?*\[\]:]/g, '').slice(0, 28) || 'Supplier', k = 1, base = nm;
+            while (used[nm.toLowerCase()]) nm = base.slice(0, 26) + '_' + (++k);
+            used[nm.toLowerCase()] = 1;
+            XLSX.utils.book_append_sheet(wb, ws, nm);
+        });
+        XLSX.writeFile(wb, `fuel_purchases_${localDateStr()}.xlsx`);
+    }
+    document.addEventListener('DOMContentLoaded', fpInitGrid);
+    </script>
+
     <!-- Google Sheets sync (talks to the Apps Script in Code.gs) -->
     <div id="sheetsPill" onclick="switchTab('settings')" class="no-print fixed bottom-3 left-3 z-40 cursor-pointer select-none px-3 py-1.5 rounded-full text-[11px] font-semibold bg-slate-800/90 border border-slate-700 text-slate-300 shadow-lg hidden"></div>
     <script>
