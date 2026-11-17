@@ -1506,6 +1506,7 @@
                             <button type="button" onclick="Sheets.disconnect()" class="px-4 py-2 text-xs font-semibold bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-lg border border-slate-700">Disconnect</button>
                         </div>
                         <p id="sheetsStatusText" class="text-xs text-slate-400">Not connected.</p>
+                        <p class="text-[11px] text-slate-500">The URL is saved in this browser and re-used after every refresh (use Disconnect to remove it). Records added, edited or deleted here or directly in the Google Sheet are kept in step both ways; changes made in the sheet show up here within about 20 seconds.</p>
                     </div>
 
                     <div class="max-w-3xl mx-auto bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl space-y-4">
@@ -2118,7 +2119,7 @@
             renderAll();
             updateCardLoadFormInfo();
             if (typeof tlOnLoad === 'function') tlOnLoad();
-            if (window.Sheets) Sheets.init();
+            if (typeof Sheets !== 'undefined') Sheets.init();
         };
 
         // State Management
@@ -2138,7 +2139,7 @@
         function saveState() {
             try { localStorage.setItem(STORAGE_KEY, JSON.stringify(appState)); } catch (e) {}
             renderAll();
-            if (window.Sheets) Sheets.queuePush();   // sends changes to Google Sheets (if connected)
+            if (typeof Sheets !== 'undefined') Sheets.queuePush();   // sends changes to Google Sheets (if connected)
         }
 
         function clearAllData() {
@@ -5715,35 +5716,58 @@
     document.addEventListener('DOMContentLoaded', fpInitGrid);
     </script>
 
-    <!-- Google Sheets sync (talks to the Apps Script in Code.gs) -->
+    <!-- Google Sheets sync (talks to the Apps Script in app_script.txt) -->
     <div id="sheetsPill" onclick="switchTab('settings')" class="no-print fixed bottom-3 left-3 z-40 cursor-pointer select-none px-3 py-1.5 rounded-full text-[11px] font-semibold bg-slate-800/90 border border-slate-700 text-slate-300 shadow-lg hidden"></div>
     <script>
     const Sheets = (function () {
         // Optional: hard-code your Web app URL here so every browser connects automatically.
         const DEFAULT_URL = '';
-        const K_URL = 'fms_sheets_url', K_KEY = 'fms_sheets_key', K_VER = 'fms_sheets_version', K_DIRTY = 'fms_sheets_dirty';
-        const ARRAYS = ['receiveLogs', 'issueLogs', 'cardLoads', 'trucks', 'destinations'];
+        const K_URL = 'fms_sheets_url', K_KEY = 'fms_sheets_key', K_VER = 'fms_sheets_version', K_DIRTY = 'fms_sheets_dirty', K_BASE = 'fms_sheets_base';
+        const POLL_MS = 20000;
+        const ARRAYS = ['receiveLogs', 'issueLogs', 'cardLoads', 'trucks', 'destinations', 'fpSuppliers', 'fpEntries'];
+        const keyOf = n => n === 'destinations' ? 'name' : 'id';
+
+        /* ---- storage: the URL is kept in localStorage AND a long-lived cookie, so it survives refreshes ---- */
         const ls = {
             get: k => { try { return localStorage.getItem(k); } catch (e) { return null; } },
             set: (k, v) => { try { localStorage.setItem(k, v); } catch (e) {} },
             del: k => { try { localStorage.removeItem(k); } catch (e) {} }
         };
-        let url = ls.get(K_URL) || DEFAULT_URL, key = ls.get(K_KEY) || '';
+        const ck = {
+            get: k => { try { const m = document.cookie.match(new RegExp('(?:^|; )' + k + '=([^;]*)')); return m ? decodeURIComponent(m[1]) : null; } catch (e) { return null; } },
+            set: (k, v) => { try { document.cookie = k + '=' + encodeURIComponent(v) + '; max-age=' + (60 * 60 * 24 * 400) + '; path=/; SameSite=Lax'; } catch (e) {} },
+            del: k => { try { document.cookie = k + '=; max-age=0; path=/'; } catch (e) {} }
+        };
+        const urlStore = {
+            get: () => ls.get(K_URL) || ck.get(K_URL),
+            set: v => { ls.set(K_URL, v); ck.set(K_URL, v); },
+            del: () => { ls.del(K_URL); ck.del(K_URL); }
+        };
+
+        let url = urlStore.get() || DEFAULT_URL, key = ls.get(K_KEY) || '';
+        if (url) urlStore.set(url);                 // re-write both copies
         let version = Number(ls.get(K_VER) || 0);
         let synced = {};            // last JSON known to be in the sheet, per collection
-        let pushing = false, again = false, timer = null, poller = null;
+        let pushing = false, again = false, timer = null, poller = null, inited = false;
 
         const connected = () => !!url;
         const note = (m, t) => { if (typeof showNotification === 'function') showNotification(m, t); };
         const isDirty = () => ls.get(K_DIRTY) === '1';
         const setDirty = d => d ? ls.set(K_DIRTY, '1') : ls.del(K_DIRTY);
+        const clone = x => JSON.parse(JSON.stringify(x));
+        function stable(v) {
+            if (Array.isArray(v)) return v.map(stable);
+            if (v && typeof v === 'object') { const o = {}; Object.keys(v).sort().forEach(k => { o[k] = stable(v[k]); }); return o; }
+            return v;
+        }
+        const j = x => JSON.stringify(stable(x));
 
         function status(kind, detail) {
             const pill = document.getElementById('sheetsPill'), txt = document.getElementById('sheetsStatusText');
             const map = {
                 off:    ['', 'Not connected. Data is stored in this browser only.'],
-                ok:     ['<i class="fa-solid fa-circle text-emerald-400 mr-1"></i> Synced to Google Sheets', 'Connected. All changes are saved to your Google Sheet.'],
-                saving: ['<i class="fa-solid fa-spinner fa-spin text-sky-400 mr-1"></i> Saving to Google Sheets…', 'Saving…'],
+                ok:     ['<i class="fa-solid fa-circle text-emerald-400 mr-1"></i> Synced to Google Sheets', 'Connected. Changes made here or in the Google Sheet are kept in step both ways.'],
+                saving: ['<i class="fa-solid fa-spinner fa-spin text-sky-400 mr-1"></i> Syncing with Google Sheets…', 'Syncing…'],
                 error:  ['<i class="fa-solid fa-triangle-exclamation text-amber-400 mr-1"></i> Not synced – will retry', 'Could not reach Google Sheets: ' + (detail || 'unknown error') + '. Your data is safe in this browser and will be sent when the connection works.']
             };
             const m = map[kind] || map.off;
@@ -5751,23 +5775,151 @@
             if (txt) txt.textContent = m[1];
         }
 
-        function normalize(d) {
-            const base = emptyState(); d = d || {};
-            const t = d.tanks || {};
-            const out = { ...base, ...d, tanks: { Diesel: { ...base.tanks.Diesel, ...t.Diesel }, Petrol: { ...base.tanks.Petrol, ...t.Petrol } } };
-            ARRAYS.forEach(a => { if (!Array.isArray(out[a])) out[a] = []; });
+        function fillFields() {
+            const u = document.getElementById('sheetsUrl'), k = document.getElementById('sheetsKey');
+            if (u) u.value = url; if (k) { k.value = key; k.setAttribute('autocomplete', 'off'); }
+        }
+        function lockFields(on) {
+            ['sheetsUrl', 'sheetsKey'].forEach(id => {
+                const el = document.getElementById(id); if (!el) return;
+                el.readOnly = !!on; el.classList.toggle('opacity-70', !!on);
+            });
+        }
+        const fieldsLocked = () => { const el = document.getElementById('sheetsUrl'); return !!(el && el.readOnly); };
+
+        /* ---- state <-> sheet layout ----
+           The supplier accounts and the purchase ledger live in app.fuelPurchases; in the sheet they get
+           their own tabs ("Fuel Suppliers" / "Fuel Purchases"), one row per record. */
+        function toWire(st) {
+            const w = {}, fp = st.fuelPurchases || {};
+            Object.keys(st).forEach(k => { if (k !== 'fuelPurchases') w[k] = st[k]; });
+            const sup = Array.isArray(fp.suppliers) ? fp.suppliers : [];
+            const names = {}; sup.forEach(s => { names[s.id] = s.name || ''; });
+            w.fpSuppliers = sup;
+            w.fpEntries = (Array.isArray(fp.entries) ? fp.entries : []).map(e => ({ ...e, supplier: names[e.sid] || '' }));
+            w.fpMeta = { v2: !!fp.v2 };
+            ARRAYS.forEach(a => { if (!Array.isArray(w[a])) w[a] = []; });
+            return w;
+        }
+        function fromWire(w) {
+            w = w || {};
+            const base = emptyState(), cfg = {};
+            Object.keys(w).forEach(k => { if (!ARRAYS.includes(k)) cfg[k] = clone(w[k]); });
+            const legacy = cfg.fuelPurchases && typeof cfg.fuelPurchases === 'object' ? cfg.fuelPurchases : null;   // older sheets kept it in Settings
+            const meta = cfg.fpMeta || {};
+            delete cfg.fuelPurchases; delete cfg.fpMeta;
+            let sup = Array.isArray(w.fpSuppliers) ? clone(w.fpSuppliers) : [];
+            let ent = Array.isArray(w.fpEntries) ? clone(w.fpEntries) : [];
+            let v2 = !!meta.v2;
+            if (!sup.length && !ent.length && legacy) { sup = clone(legacy.suppliers || []); ent = clone(legacy.entries || []); v2 = !!legacy.v2; }
+            const t = cfg.tanks || {};
+            const out = { ...base, ...cfg, tanks: { Diesel: { ...base.tanks.Diesel, ...t.Diesel }, Petrol: { ...base.tanks.Petrol, ...t.Petrol } } };
+            ['receiveLogs', 'issueLogs', 'cardLoads', 'trucks', 'destinations'].forEach(a => { out[a] = Array.isArray(w[a]) ? clone(w[a]) : []; });
+            out.fuelPurchases = { v2, suppliers: sup, entries: ent };
             return out;
         }
-        function snapshot(st) {
+        function snapshotWire(w) {
             const snap = {}, cfg = {};
-            Object.keys(st).forEach(k => { if (ARRAYS.includes(k)) snap[k] = JSON.stringify(st[k]); else cfg[k] = st[k]; });
-            snap.config = JSON.stringify(cfg);
+            Object.keys(w).forEach(k => { if (ARRAYS.includes(k)) snap[k] = j(w[k] || []); else cfg[k] = w[k]; });
+            ARRAYS.forEach(a => { if (!(a in snap)) snap[a] = '[]'; });
+            snap.config = j(cfg);
             return snap;
         }
+        const snapshot = st => snapshotWire(toWire(st));
+        function syncedWire() {
+            if (!Object.keys(synced).length) return null;
+            const w = {};
+            Object.keys(synced).forEach(n => { try { const v = JSON.parse(synced[n]); if (n === 'config') Object.assign(w, v); else w[n] = v; } catch (e) {} });
+            return w;
+        }
+        function loadBase() { try { const o = JSON.parse(ls.get(K_BASE) || 'null'); return o && typeof o === 'object' ? o : {}; } catch (e) { return {}; } }
+        function setSynced(o) { synced = o; try { localStorage.setItem(K_BASE, JSON.stringify(o)); } catch (e) { ls.del(K_BASE); } }
+        const diffNames = snap => Object.keys(snap).filter(n => snap[n] !== synced[n]);
+
         function localHasData() {
-            return ARRAYS.some(a => (appState[a] || []).length) || ['Diesel', 'Petrol'].some(f => appState.tanks[f].current || appState.tanks[f].opening);
+            const fp = appState.fuelPurchases || {};
+            return ['receiveLogs', 'issueLogs', 'cardLoads', 'trucks', 'destinations'].some(a => (appState[a] || []).length)
+                || (fp.suppliers || []).length > 0 || (fp.entries || []).length > 0
+                || ['Diesel', 'Petrol'].some(f => appState.tanks[f].current || appState.tanks[f].opening);
         }
 
+        /* ---- keeping tank levels right when records are added / removed / edited in the sheet ----
+           Tank level = opening + received - issued from the main base. If the records changed, move the
+           level by the same amount (keeping whatever offset the app already had). */
+        function tankFormula(st, f) {
+            const t = (st.tanks && st.tanks[f]) || {};
+            const rec = (st.receiveLogs || []).filter(l => l.fuelType === f).reduce((a, l) => a + (Number(l.quantity) || 0), 0);
+            const iss = (st.issueLogs || []).filter(l => l.fuelType === f && issueSource(l) === MAIN_BASE).reduce((a, l) => a + (Number(l.quantity) || 0), 0);
+            return (Number(t.opening) || 0) + rec - iss;
+        }
+        function reconcileTanks(baseSt, next) {
+            ['Diesel', 'Petrol'].forEach(f => {
+                const fb = tankFormula(baseSt, f), fn = tankFormula(next, f);
+                if (Math.abs(fn - fb) > 0.0005) {
+                    const offset = (Number((baseSt.tanks[f] || {}).current) || 0) - fb;
+                    next.tanks[f].current = r3(fn + offset);
+                }
+            });
+        }
+
+        /* ---- supplier names in the Fuel Purchases tab -> supplier ids ---- */
+        function fixLinks(st, baseW) {
+            const fp = st.fuelPurchases, byId = {}, byName = {};
+            fp.suppliers.forEach(s => { byId[s.id] = s; byName[String(s.name || '').trim().toLowerCase()] = s; });
+            const gone = new Set(((baseW && baseW.fpSuppliers) || []).filter(s => !byId[s.id]).map(s => s.id));
+            let orphans = 0; const keep = [];
+            fp.entries.forEach(e => {
+                const typed = String(e.supplier || '').trim().toLowerCase(), cur = byId[e.sid];
+                if (typed && (!cur || String(cur.name || '').trim().toLowerCase() !== typed) && byName[typed]) e.sid = byName[typed].id;
+                delete e.supplier;
+                const s = byId[e.sid];
+                if (!s) { if (gone.has(e.sid)) return; orphans++; }      // supplier deleted in the sheet -> its ledger rows go too
+                else if (!e.t && typeof fpTerms === 'function') e.t = fpTerms(s);
+                keep.push(e);
+            });
+            fp.entries = keep;
+            return orphans;
+        }
+
+        /* ---- three-way merge: base = last synced, local = this browser, remote = the sheet ---- */
+        function mergeTanks(b, l, r) {
+            const o = {};
+            ['Diesel', 'Petrol'].forEach(f => {
+                const bb = (b || {})[f] || {}, ll = (l || {})[f] || {}, rr = (r || {})[f] || {};
+                o[f] = {};
+                new Set([...Object.keys(ll), ...Object.keys(rr)]).forEach(fld => { o[f][fld] = (j(ll[fld]) !== j(bb[fld])) ? ll[fld] : rr[fld]; });
+            });
+            return o;
+        }
+        function mergeWire(baseW, localW, remoteW) {
+            const out = {};
+            ARRAYS.forEach(name => {
+                const k = keyOf(name);
+                const mk = a => { const m = new Map(); (a || []).forEach(r => { if (r && r[k] !== undefined) m.set(String(r[k]), r); }); return m; };
+                const B = mk(baseW && baseW[name]), L = mk(localW[name]), R = mk(remoteW[name]);
+                const order = [], seen = new Set();
+                [...L.keys(), ...R.keys()].forEach(id => { if (!seen.has(id)) { seen.add(id); order.push(id); } });
+                out[name] = [];
+                order.forEach(id => {
+                    const b = B.get(id), l = L.get(id), r = R.get(id);
+                    let pick = null;
+                    if (l && r) pick = (!b || j(l) !== j(b)) ? l : r;       // both have it: whoever changed it wins (this browser if both)
+                    else if (l) pick = (!b || j(l) !== j(b)) ? l : null;    // gone from the sheet: keep only if edited here
+                    else if (r) pick = (!b || j(r) !== j(b)) ? r : null;    // deleted here: keep only if edited in the sheet
+                    if (pick) out[name].push(pick);
+                });
+            });
+            const split = w => { const c = {}; Object.keys(w || {}).forEach(k => { if (!ARRAYS.includes(k)) c[k] = w[k]; }); return c; };
+            const bc = split(baseW), lc = split(localW), rc = split(remoteW);
+            new Set([...Object.keys(lc), ...Object.keys(rc)]).forEach(k => {
+                if (k === 'tanks') { out.tanks = mergeTanks(bc.tanks, lc.tanks, rc.tanks); return; }
+                const localChanged = j(lc[k]) !== j(bc[k]);
+                out[k] = (localChanged && k in lc) ? lc[k] : (k in rc ? rc[k] : lc[k]);
+            });
+            return out;
+        }
+
+        /* ---- network ---- */
         async function call(method, payload) {
             let res;
             try {
@@ -5785,13 +5937,21 @@
             return data;
         }
 
-        function adopt(state, ver) {
-            appState = normalize(state);
+        // Put the sheet's data (optionally already merged with ours) into the app.
+        function applyRemote(remoteW, ver, mergedW, baseOverride) {
+            const baseW = baseOverride || syncedWire();
+            const next = fromWire(mergedW || remoteW);
+            const orphans = fixLinks(next, baseW);
+            if (baseW) reconcileTanks(fromWire(baseW), next);
+            appState = next;
             try { localStorage.setItem(STORAGE_KEY, JSON.stringify(appState)); } catch (e) {}
             version = ver; ls.set(K_VER, String(ver));
-            synced = snapshot(appState);
-            setDirty(false);
+            setSynced(snapshotWire(remoteW));
+            const dirty = diffNames(snapshot(appState)).length > 0;   // e.g. our changes still to send, or stock adjusted
+            setDirty(dirty);
             renderAll();
+            if (dirty) { clearTimeout(timer); timer = setTimeout(() => push(false), 300); }
+            if (orphans) note(orphans + ' row(s) in the "Fuel Purchases" tab have a supplier name that matches no supplier, so they are not shown in the app. Fix the Supplier column in the sheet.', 'error');
         }
 
         function queuePush() {
@@ -5814,13 +5974,24 @@
                 const res = await call('POST', { action: 'save', baseVersion: version, force: !!force, changes });
                 if (res.ok) {
                     version = res.version; ls.set(K_VER, String(version));
-                    names.forEach(n => { synced[n] = snap[n]; });
-                    if (!again) setDirty(Object.keys(snapshot(appState)).some(n => snapshot(appState)[n] !== synced[n]));
+                    const s = { ...synced }; names.forEach(n => { s[n] = snap[n]; }); setSynced(s);
+                    const cur = snapshot(appState);
+                    setDirty(diffNames(cur).length > 0);
                     status('ok');
                 } else if (res.conflict) {
-                    if (res.state) adopt(res.state, res.version);
-                    status('ok');
-                    note('Someone else saved at the same moment, so the latest data was loaded. Please check it and re-enter your last entry if it is missing.', 'error');
+                    // The sheet changed (by someone else, or by hand) since we last synced: merge, then save again.
+                    const baseW = syncedWire();
+                    if (res.state && baseW) {
+                        applyRemote(res.state, res.version, mergeWire(baseW, toWire(appState), res.state));
+                        status('ok');
+                        note('Changes made in the Google Sheet (or on another device) were merged with yours.');
+                    } else if (res.state) {
+                        applyRemote(res.state, res.version, mergeWire(null, toWire(appState), res.state), toWire(appState));
+                        status('ok');
+                    } else {
+                        version = res.version; ls.set(K_VER, String(version)); setSynced({}); setDirty(true);
+                        clearTimeout(timer); timer = setTimeout(() => push(true), 300);
+                    }
                 }
             } catch (e) {
                 setDirty(true); status('error', e.message);
@@ -5836,10 +6007,12 @@
             if (silent && a && /^(INPUT|SELECT|TEXTAREA)$/.test(a.tagName)) return;   // don't disturb typing
             try {
                 const res = await call('GET', { v: version });
-                if (res.unchanged) { if (!Object.keys(synced).length) synced = snapshot(appState); status('ok'); return; }
-                if (res.empty) { synced = {}; await push(true); return; }
-                adopt(res.state, res.version); status('ok');
+                if (res.unchanged) { if (!Object.keys(synced).length) setSynced(snapshot(appState)); status('ok'); return; }
+                if (res.empty) { setSynced({}); await push(true); return; }
+                const before = j(snapshot(appState));
+                applyRemote(res.state, res.version); status('ok');
                 if (!silent) note('Latest data loaded from Google Sheets.');
+                else if (j(snapshot(appState)) !== before) note('Updated from Google Sheets.');
             } catch (e) { status('error', e.message); if (!silent) note(e.message, 'error'); }
         }
 
@@ -5850,31 +6023,41 @@
         }
 
         async function connect() {
+            if (connected() && fieldsLocked()) { return syncNow(); }       // already connected: the button just syncs
             const { u, k } = readFields();
             if (!/^https:\/\/script\.google\.com\/.+\/exec/.test(u)) { note('Paste the Web app URL (it ends with /exec).', 'error'); return; }
             const prev = { url, key };
             url = u; key = k;
+            urlStore.set(url); ls.set(K_KEY, key);          // saved right away: it stays after refreshes
+            status('saving');
             try {
                 const res = await call('GET', { v: -1 });
-                ls.set(K_URL, url); ls.set(K_KEY, key);
                 if (res.empty) {
-                    synced = {}; version = 0; ls.set(K_VER, '0');
+                    setSynced({}); version = 0; ls.set(K_VER, '0');
                     await push(true);
                     note('Connected. Your current data was copied to the sheet.');
                 } else {
-                    if (localHasData() && !confirm('This Google Sheet already contains data.\n\nOK = load the sheet\'s data into this browser (replaces what is here).\nCancel = stop and change nothing.')) { url = prev.url; key = prev.key; return; }
-                    adopt(res.state, res.version);
+                    if (localHasData() && !confirm('This Google Sheet already contains data.\n\nOK = load the sheet\'s data into this browser (replaces what is here).\nCancel = stop and change nothing.')) {
+                        url = prev.url; key = prev.key;
+                        if (prev.url) urlStore.set(prev.url); else urlStore.del();
+                        if (prev.key) ls.set(K_KEY, prev.key); else ls.del(K_KEY);
+                        status(connected() ? 'ok' : 'off'); return;
+                    }
+                    setSynced({});
+                    applyRemote(res.state, res.version);
                     note('Connected. Data loaded from Google Sheets.');
                 }
-                status('ok'); startPolling();
-            } catch (e) { url = prev.url; key = prev.key; status(connected() ? 'error' : 'off', e.message); note(e.message, 'error'); }
+                status('ok'); lockFields(true); startPolling();
+            } catch (e) {
+                status('error', e.message); note(e.message, 'error'); startPolling();   // URL stays saved; it keeps retrying
+            }
         }
 
         async function uploadLocal() {
             if (!connected()) { note('Connect to Google Sheets first.', 'error'); return; }
             if (!confirm('Overwrite the Google Sheet with the data in THIS browser? Anything only in the sheet will be lost.')) return;
-            synced = {};
-            try { const res = await call('GET', { v: -1 }); version = res.version; } catch (e) { note(e.message, 'error'); return; }
+            setSynced({});
+            try { const res = await call('GET', { v: -1 }); version = res.version; ls.set(K_VER, String(version)); } catch (e) { note(e.message, 'error'); return; }
             await push(true);
             note('Sheet updated from this browser.');
         }
@@ -5883,8 +6066,9 @@
             if (!connected()) return;
             if (!confirm('Disconnect from Google Sheets? Data stays in the sheet and in this browser.')) return;
             url = ''; key = ''; version = 0; synced = {};
-            [K_URL, K_KEY, K_VER, K_DIRTY].forEach(ls.del);
+            urlStore.del(); [K_KEY, K_VER, K_DIRTY, K_BASE].forEach(ls.del);
             document.getElementById('sheetsUrl').value = ''; document.getElementById('sheetsKey').value = '';
+            lockFields(false);
             clearInterval(poller); poller = null; status('off');
         }
 
@@ -5896,34 +6080,46 @@
 
         function startPolling() {
             clearInterval(poller);
-            poller = setInterval(() => { if (!document.hidden) pull(true); }, 45000);
+            poller = setInterval(() => { if (!document.hidden) pull(true); }, POLL_MS);
         }
 
         async function init() {
-            document.getElementById('sheetsUrl').value = url;
-            document.getElementById('sheetsKey').value = key;
+            if (inited) return; inited = true;
+            fillFields();
             if (!connected()) { status('off'); return; }
+            lockFields(true);
             status('saving');
-            if (isDirty()) {
-                // Unsent changes from last time (e.g. it was offline)
-                try {
+            const hadBase = !!ls.get(K_BASE);
+            synced = loadBase();
+            try {
+                if (isDirty() || !hadBase) {
+                    // Unsent changes from last time (or first run of this version): compare with the sheet and merge.
                     const res = await call('GET', { v: -1 });
-                    if (res.version === version) { synced = res.empty ? {} : snapshot(appState); await push(!!res.empty); }
+                    if (res.empty) { setSynced({}); await push(true); }
+                    else if (isDirty() && hadBase && res.version === version) { await push(false); }
+                    else if (!localHasData()) { applyRemote(res.state, res.version); }
                     else {
-                        if (typeof exportBackup === 'function') exportBackup();   // keep a copy of the unsynced work
-                        adopt(res.state, res.version);
-                        note('The sheet was changed by someone else while this browser was offline. The latest sheet data was loaded and a backup of your offline changes was downloaded.', 'error');
+                        const before = j(snapshot(appState));
+                        const localW = toWire(appState);
+                        applyRemote(res.state, res.version, mergeWire(hadBase ? syncedWire() : null, localW, res.state), hadBase ? null : localW);
+                        if (j(snapshot(appState)) !== before) note('Unsynced changes were merged with the latest Google Sheet data.');
                     }
-                } catch (e) { status('error', e.message); }
-            } else { await pull(true); }
+                    if (!isDirty()) status('ok');
+                } else { await pull(true); }
+            } catch (e) { status('error', e.message); }
             startPolling();
         }
 
+        // keep the saved URL visible as soon as the page is there (before the app finishes loading)
+        fillFields(); if (connected()) lockFields(true);
+
         document.addEventListener('visibilitychange', () => { if (!document.hidden) pull(true); });
+        window.addEventListener('focus', () => pull(true));
         window.addEventListener('beforeunload', e => { if (connected() && (pushing || timer && isDirty())) { e.preventDefault(); e.returnValue = ''; } });
 
         return { init, connect, syncNow, uploadLocal, disconnect, queuePush };
     })();
+    window.Sheets = Sheets;   // `const` does not create a window property; app code looks it up there
     </script>
 </body>
 </html>
