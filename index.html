@@ -4,6 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <meta name="theme-color" content="#0f172a">
+    <meta name="format-detection" content="telephone=no">
+    <meta name="apple-mobile-web-app-title" content="FuelTrack Pro">
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -167,6 +169,93 @@
         html.light .fp-grid tr.fp-pay td:not(.rn) { background: rgba(16, 185, 129, .1); }
         html.light .fp-grid tr.fp-open td:not(.rn) { background: rgba(245, 158, 11, .12); }
         html.light .fp-grid input:focus { background: rgba(2, 132, 199, .1); }
+        /* =====================================================================
+           PHONE LAYOUT (screens under 768px) - added for mobile use
+           Desktop / laptop / tablet layouts are NOT affected by anything below.
+           ===================================================================== */
+        button, a, select, label, summary { touch-action: manipulation; }
+        html { -webkit-tap-highlight-color: rgba(14, 165, 233, .15); }
+        img, canvas, svg { max-width: 100%; }
+        @media screen and (max-width: 1023px) {
+            /* Fleet header: search box + buttons wrap instead of overflowing */
+            #tab-fleet div:has(> #fleetSearchInput) { flex-wrap: wrap; gap: .5rem; }
+            #tab-fleet div:has(> #fleetSearchInput) > * { margin-left: 0 !important; }
+            #fleetSearchInput { flex: 1 1 100%; width: 100%; max-width: none; min-width: 0; }
+            #tab-fleet div:has(> #fleetSearchInput) > button { flex: 1 1 auto; justify-content: center; }
+        }
+        @media screen and (max-width: 767px) {
+            /* Low-stock banner: slimmer so it leaves more screen for content */
+            #lowStockBanner { padding: .4rem .75rem; font-size: 12px; line-height: 1.3; gap: .5rem; }
+            #lowStockBanner button { padding: .3rem .6rem; font-size: 11px; flex-shrink: 0; }
+
+            /* Report filters: tidy two-column grid instead of ragged widths */
+            #tab-reports .flex.flex-wrap.items-end { display: grid; grid-template-columns: 1fr 1fr; align-items: end; gap: .75rem; }
+            #tab-reports .flex.flex-wrap.items-end > div:not(.flex) { min-width: 0; }
+            #tab-reports .flex.flex-wrap.items-end > div:not(.flex) > :is(select, input) { width: 100%; max-width: none; min-width: 0; }
+            #tab-reports .flex.flex-wrap.items-end > .flex-wrap { grid-column: 1 / -1; margin-left: 0; }
+            #tab-reports .flex.flex-wrap.items-end > .flex-wrap > button { flex: 1 1 30%; }
+
+            /* ---------- Data tables become stacked cards ---------- */
+            .table-scroll { overflow-x: visible; }
+            table.rt { display: block; width: 100%; min-width: 0 !important; border: 0; }
+            table.rt thead { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+            table.rt tbody, table.rt tfoot { display: block; width: 100%; background: transparent; border: 0 !important; }
+            table.rt tr {
+                display: grid; grid-template-columns: 1fr 1fr; column-gap: .5rem; row-gap: 0;
+                margin: 0 0 .7rem; padding: .25rem .2rem .35rem;
+                border: 1px solid rgba(148, 163, 184, .25) !important; border-radius: .9rem;
+                background: rgba(148, 163, 184, .07);
+            }
+            table.rt tfoot tr { border-color: rgba(148, 163, 184, .45) !important; background: rgba(148, 163, 184, .12); }
+            table.rt td {
+                display: block; min-width: 0; padding: .3rem .7rem !important; border: 0 !important;
+                text-align: left !important; white-space: normal !important; overflow-wrap: anywhere;
+            }
+            table.rt td::before {
+                content: attr(data-label); display: block; margin-bottom: 1px;
+                font-family: Inter, system-ui, sans-serif; font-style: normal; font-size: 10px; font-weight: 600; line-height: 1.3;
+                letter-spacing: .05em; text-transform: uppercase; color: #94a3b8 !important;
+            }
+            table.rt td[data-label=""]::before, table.rt td.rt-span::before, table.rt td:first-child::before { display: none; }
+            /* first cell acts as the card title */
+            table.rt td:first-child { grid-column: 1 / -1; font-weight: 600; font-size: 14px; padding-top: .5rem !important; padding-bottom: .45rem !important; margin-bottom: .2rem; border-bottom: 1px solid rgba(148, 163, 184, .2) !important; }
+            table.rt td.rt-span { grid-column: 1 / -1; text-align: center !important; padding: 1rem .7rem !important; }
+            table.rt td.rt-empty { display: none; }
+            /* action buttons sit on their own row */
+            table.rt td.rt-act { grid-column: 1 / -1; display: flex; flex-wrap: wrap; align-items: center; gap: .5rem; padding-top: .45rem !important; margin-top: .2rem; border-top: 1px solid rgba(148, 163, 184, .2) !important; }
+            table.rt td.rt-act button, table.rt td.rt-act a { min-height: 40px; min-width: 40px; }
+            html.light table.rt td::before { color: #64748b !important; }
+            table.rt tfoot td.rt-span { text-align: left !important; padding: .5rem .7rem !important; }
+            html.light table.rt tr { background: rgba(100, 116, 139, .06); border-color: rgba(100, 116, 139, .3) !important; }
+
+            /* ---------- Fuel Purchases ledger: one tappable card per entry ---------- */
+            .fp-wrap { max-height: none; overflow: visible; border: 0 !important; border-radius: 0; }
+            .fp-grid { display: block; min-width: 0; width: 100%; background: transparent !important; }
+            .fp-grid thead { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+            .fp-grid tbody { display: block; }
+            .fp-grid tr {
+                display: grid; grid-template-columns: 1fr 1fr; margin: 0 0 .8rem; overflow: hidden;
+                border: 1px solid #1e293b; border-radius: .9rem; background: #0f172a;
+            }
+            .fp-grid td { display: block; min-width: 0; padding: .45rem .6rem .5rem; border: 0 !important; }
+            .fp-grid td::before { content: attr(data-label); display: block; padding: 0 .1rem .2rem; font-family: Inter, system-ui, sans-serif; font-style: normal; font-size: 10px; font-weight: 600; letter-spacing: .05em; text-transform: uppercase; color: #64748b; }
+            .fp-grid td.rn { position: static; grid-column: 1 / -1; width: auto; min-width: 0; text-align: left; padding: .4rem .8rem; font-size: 12px; font-weight: 600; background: #0b1220; }
+            .fp-grid td.rn::before { content: 'Entry'; display: inline; padding: 0; margin-right: .35rem; }
+            .fp-grid td:nth-child(4), .fp-grid td:nth-child(5), .fp-grid td:nth-child(9), .fp-grid td:nth-child(10) { grid-column: 1 / -1; }
+            .fp-grid td:nth-child(10)::before { display: none; }
+            .fp-grid td input { padding: .6rem .65rem; border: 1px solid #334155; border-radius: .6rem; background: #0b1220; }
+            .fp-grid td input:focus { border-color: #0ea5e9; box-shadow: 0 0 0 2px rgba(14, 165, 233, .35); }
+            .fp-grid td.ro { white-space: normal; padding-top: .45rem; }
+            .fp-grid td.ro.num { text-align: left; font-size: 15px; }
+            .fp-grid td.num input { text-align: left; }
+            .fp-grid select.fp-status { min-height: 42px; font-size: 14px; padding: .4rem .5rem; }
+            .fp-grid td.act { display: flex; justify-content: flex-end; gap: .5rem; opacity: 1; padding-top: .1rem; }
+            .fp-grid td.act button { min-width: 44px; min-height: 44px; font-size: 15px; }
+            html.light .fp-grid tr { background: #ffffff; border-color: #e2e8f0; }
+            html.light .fp-grid td.rn { background: #f1f5f9; }
+            html.light .fp-grid td input { background: #f8fafc; border-color: #cbd5e1; }
+            html.light .fp-grid td::before { color: #64748b; }
+        }
         @media print {
             .print-only { display: block !important; }
             aside, header, #lowStockBanner, .no-print { display: none !important; }
@@ -5044,9 +5133,39 @@
             p.insertBefore(w, t); w.appendChild(t);
         });
     }
+
+    /* Phones: give every table cell its column name (shown on the stacked card) and flag action / empty / full-width cells.
+       Only attributes + classes are changed here, so no table data or behaviour is touched. */
+    function labelTables() {
+        document.querySelectorAll('table').forEach(t => {
+            if (!t.tHead || !t.tHead.rows.length) return;
+            const isGrid = t.classList.contains('fp-grid');
+            if (!isGrid) t.classList.add('rt');
+            const hr = t.tHead.rows[t.tHead.rows.length - 1], labels = [];
+            Array.from(hr.cells).forEach(th => {
+                const txt = (th.textContent || '').replace(/\s+/g, ' ').trim();
+                for (let i = 0; i < (th.colSpan || 1); i++) labels.push(txt);
+            });
+            Array.from(t.rows).forEach(tr => {
+                if (tr.parentNode === t.tHead) return;
+                let col = 0;
+                Array.from(tr.cells).forEach(td => {
+                    const lab = td.colSpan > 1 ? '' : (labels[col] || '');
+                    col += td.colSpan || 1;
+                    if (td.getAttribute('data-label') !== lab) td.setAttribute('data-label', lab);
+                    if (isGrid) return;
+                    const hasCtl = !!td.querySelector('button, a, select, input');
+                    const hasTxt = (td.textContent || '').trim() !== '';
+                    td.classList.toggle('rt-span', td.colSpan > 1 && hasTxt);
+                    td.classList.toggle('rt-empty', !hasTxt && !hasCtl && !td.querySelector('img, svg, canvas'));
+                    td.classList.toggle('rt-act', hasCtl && (lab === '' || !hasTxt || /^(actions?|manage|edit|options?)$/i.test(lab)));
+                });
+            });
+        });
+    }
     (function () {
         let queued = false;
-        const run = () => { queued = false; makeTablesScrollable(); };
+        const run = () => { queued = false; makeTablesScrollable(); labelTables(); };
         new MutationObserver(() => { if (!queued) { queued = true; requestAnimationFrame(run); } })
             .observe(document.body, { childList: true, subtree: true });
         document.addEventListener('DOMContentLoaded', run);
