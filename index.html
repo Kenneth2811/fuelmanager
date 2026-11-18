@@ -1589,13 +1589,16 @@
                             <input id="sheetsKey" type="password" placeholder="Access key (only if you set one in the script)" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-sky-500">
                         </div>
                         <div class="flex flex-wrap gap-2">
-                            <button type="button" onclick="Sheets.connect()" class="px-4 py-2 text-xs font-semibold bg-sky-600 hover:bg-sky-500 text-white rounded-lg"><i class="fa-solid fa-plug mr-1"></i> Connect &amp; sync</button>
+                            <button type="button" id="sheetsConnectBtn" onclick="Sheets.connect()" class="px-4 py-2 text-xs font-semibold bg-sky-600 hover:bg-sky-500 text-white rounded-lg"><i class="fa-solid fa-plug mr-1"></i> Connect &amp; sync</button>
                             <button type="button" onclick="Sheets.syncNow()" class="px-4 py-2 text-xs font-semibold bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-lg border border-slate-700"><i class="fa-solid fa-rotate mr-1"></i> Sync now</button>
                             <button type="button" onclick="Sheets.uploadLocal()" class="px-4 py-2 text-xs font-semibold bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-lg border border-slate-700"><i class="fa-solid fa-cloud-arrow-up mr-1"></i> Overwrite sheet with this browser's data</button>
-                            <button type="button" onclick="Sheets.disconnect()" class="px-4 py-2 text-xs font-semibold bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-lg border border-slate-700">Disconnect</button>
+                            <button type="button" id="sheetsDisconnectBtn" onclick="Sheets.disconnect()" class="px-4 py-2 text-xs font-semibold bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-lg border border-slate-700">Disconnect</button>
+                            <button type="button" id="sheetsBakeBtn" onclick="Sheets.bake()" class="hidden px-4 py-2 text-xs font-semibold bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg"><i class="fa-solid fa-download mr-1"></i> Download app with this URL built in</button>
                         </div>
                         <p id="sheetsStatusText" class="text-xs text-slate-400">Not connected.</p>
-                        <p class="text-[11px] text-slate-500">The URL is saved in this browser and re-used after every refresh (use Disconnect to remove it). Records added, edited or deleted here or directly in the Google Sheet are kept in step both ways; changes made in the sheet show up here within about 20 seconds.</p>
+                        <p id="sheetsBuiltInNote" class="hidden text-xs text-emerald-400"><i class="fa-solid fa-lock mr-1"></i> The Google Sheets link is built into this app. Everyone who opens the app connects and syncs automatically when it launches &ndash; there is nothing to enter or press.</p>
+                        <p id="sheetsBakeHelp" class="hidden text-[11px] text-slate-500">Right now the link is saved only in this browser. To make <b>every</b> device that opens the app's web address connect by itself, click the green button, then upload the downloaded <b>index.html</b> to where the app is hosted (replace the old one). Anyone with the app's address will then be able to read and change the sheet's data.</p>
+                        <p id="sheetsGenericHelp" class="text-[11px] text-slate-500">The URL is saved in this browser and re-used after every refresh. Records added, edited or deleted here or directly in the Google Sheet are kept in step both ways; changes made in the sheet show up here within about 20 seconds.</p>
                     </div>
 
                     <div class="max-w-3xl mx-auto bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl space-y-4">
@@ -5837,10 +5840,22 @@
 
     <!-- Google Sheets sync (talks to the Apps Script in app_script.txt) -->
     <div id="sheetsPill" onclick="switchTab('settings')" class="no-print fixed bottom-3 left-3 z-40 cursor-pointer select-none px-3 py-1.5 rounded-full text-[11px] font-semibold bg-slate-800/90 border border-slate-700 text-slate-300 shadow-lg hidden"></div>
+    <div id="sheetsBoot" class="no-print hidden fixed inset-0 flex items-center justify-center text-center p-6" style="z-index:65;background:rgba(15,23,42,.94);color:#e2e8f0">
+        <div><i class="fa-solid fa-spinner fa-spin" style="font-size:2rem;color:#38bdf8"></i>
+            <p style="margin-top:.9rem;font-weight:600">Loading the latest data from Google Sheets&hellip;</p>
+            <p style="margin-top:.3rem;font-size:12px;color:#94a3b8">First time on this device &ndash; this takes a few seconds.</p></div>
+    </div>
     <script>
     const Sheets = (function () {
-        // Optional: hard-code your Web app URL here so every browser connects automatically.
+        /* ===== BUILT-IN GOOGLE SHEETS CONNECTION =====
+           Paste your Apps Script Web app URL between the quotes on the first line below (it ends with /exec).
+           Once it is here it travels with the app: anyone who opens the app's link connects automatically and syncs
+           on launch - nothing to enter and no button to press. (Or connect once in Settings and use the green
+           "Download app with this URL built in" button, which fills these lines in for you.)
+           Note: anything written here can be seen by anyone who opens the app, including the access key. */
         const DEFAULT_URL = '';
+        const DEFAULT_KEY = '';
+        const BUILT_IN = /^https:\/\/script\.google\.com\/.+\/exec/.test(DEFAULT_URL);
         const K_URL = 'fms_sheets_url', K_KEY = 'fms_sheets_key', K_VER = 'fms_sheets_version', K_DIRTY = 'fms_sheets_dirty', K_BASE = 'fms_sheets_base';
         const POLL_MS = 20000;
         const ARRAYS = ['receiveLogs', 'issueLogs', 'cardLoads', 'trucks', 'destinations', 'fpSuppliers', 'fpEntries'];
@@ -5863,11 +5878,14 @@
             del: () => { ls.del(K_URL); ck.del(K_URL); }
         };
 
-        let url = urlStore.get() || DEFAULT_URL, key = ls.get(K_KEY) || '';
+        const storedUrl = urlStore.get();
+        // This browser was linked to a different sheet before: start the built-in one fresh (data is merged, never dropped).
+        if (BUILT_IN && storedUrl && storedUrl !== DEFAULT_URL) { ls.del(K_VER); ls.del(K_BASE); }
+        let url = BUILT_IN ? DEFAULT_URL : (storedUrl || ''), key = BUILT_IN ? DEFAULT_KEY : (ls.get(K_KEY) || '');
         if (url) urlStore.set(url);                 // re-write both copies
         let version = Number(ls.get(K_VER) || 0);
         let synced = {};            // last JSON known to be in the sheet, per collection
-        let pushing = false, again = false, timer = null, poller = null, inited = false;
+        let pushing = false, again = false, timer = null, poller = null, ready = false, initBusy = false, bootTimer = null;
 
         const connected = () => !!url;
         const note = (m, t) => { if (typeof showNotification === 'function') showNotification(m, t); };
@@ -5881,7 +5899,25 @@
         }
         const j = x => JSON.stringify(stable(x));
 
+        function applyUiMode() {
+            const show = (id, on) => { const el = document.getElementById(id); if (el) el.classList.toggle('hidden', !on); };
+            show('sheetsKey', !BUILT_IN);
+            show('sheetsConnectBtn', !BUILT_IN);
+            show('sheetsDisconnectBtn', !BUILT_IN);
+            show('sheetsBuiltInNote', BUILT_IN);
+            show('sheetsGenericHelp', !BUILT_IN);
+            show('sheetsBakeBtn', !BUILT_IN && connected());
+            show('sheetsBakeHelp', !BUILT_IN && connected());
+        }
+        function bootOverlay(on) {
+            const el = document.getElementById('sheetsBoot'); if (!el) return;
+            clearTimeout(bootTimer);
+            el.classList.toggle('hidden', !on);
+            if (on) bootTimer = setTimeout(() => el.classList.add('hidden'), 15000);   // never trap the screen
+        }
+
         function status(kind, detail) {
+            applyUiMode();
             const pill = document.getElementById('sheetsPill'), txt = document.getElementById('sheetsStatusText');
             const map = {
                 off:    ['', 'Not connected. Data is stored in this browser only.'],
@@ -6120,8 +6156,10 @@
             }
         }
 
-        async function pull(silent) {
-            if (!connected() || pushing || isDirty()) return;
+        async function pull(silent, fromInit) {
+            if (!connected()) return;
+            if (!ready && !fromInit) { init(); return; }          // first sync not done yet (e.g. offline at launch): redo it safely
+            if (pushing || isDirty()) return;
             const a = document.activeElement;
             if (silent && a && /^(INPUT|SELECT|TEXTAREA)$/.test(a.tagName)) return;   // don't disturb typing
             try {
@@ -6142,7 +6180,7 @@
         }
 
         async function connect() {
-            if (connected() && fieldsLocked()) { return syncNow(); }       // already connected: the button just syncs
+            if (BUILT_IN || (connected() && fieldsLocked())) { return syncNow(); }       // already connected: the button just syncs
             const { u, k } = readFields();
             if (!/^https:\/\/script\.google\.com\/.+\/exec/.test(u)) { note('Paste the Web app URL (it ends with /exec).', 'error'); return; }
             const prev = { url, key };
@@ -6166,7 +6204,7 @@
                     applyRemote(res.state, res.version);
                     note('Connected. Data loaded from Google Sheets.');
                 }
-                status('ok'); lockFields(true); startPolling();
+                ready = true; status('ok'); lockFields(true); startPolling();
             } catch (e) {
                 status('error', e.message); note(e.message, 'error'); startPolling();   // URL stays saved; it keeps retrying
             }
@@ -6183,8 +6221,9 @@
 
         function disconnect() {
             if (!connected()) return;
+            if (BUILT_IN) { note('Google Sheets is built into this app, so it stays connected.'); return; }
             if (!confirm('Disconnect from Google Sheets? Data stays in the sheet and in this browser.')) return;
-            url = ''; key = ''; version = 0; synced = {};
+            url = ''; key = ''; version = 0; synced = {}; ready = false;
             urlStore.del(); [K_KEY, K_VER, K_DIRTY, K_BASE].forEach(ls.del);
             document.getElementById('sheetsUrl').value = ''; document.getElementById('sheetsKey').value = '';
             lockFields(false);
@@ -6193,26 +6232,33 @@
 
         async function syncNow() {
             if (!connected()) { note('Connect to Google Sheets first.', 'error'); return; }
-            if (isDirty()) { await push(false); } else { await pull(false); }
-            if (!isDirty()) note('Everything is in sync.');
+            if (!ready) { await init(); }
+            else if (isDirty()) { await push(false); } else { await pull(false); }
+            if (ready && !isDirty()) note('Everything is in sync.');
         }
 
         function startPolling() {
             clearInterval(poller);
-            poller = setInterval(() => { if (!document.hidden) pull(true); }, POLL_MS);
+            poller = setInterval(() => {
+                if (document.hidden || !connected()) return;
+                if (!ready) init();                                  // launch sync failed (offline / script down): try again
+                else if (isDirty() && !pushing) push(false);         // changes still waiting to be sent: send them
+                else pull(true);
+            }, POLL_MS);
         }
 
         async function init() {
-            if (inited) return; inited = true;
+            if (initBusy || ready) return; initBusy = true;
             fillFields();
-            if (!connected()) { status('off'); return; }
+            if (!connected()) { status('off'); initBusy = false; return; }
             lockFields(true);
             status('saving');
             const hadBase = !!ls.get(K_BASE);
+            if (!hadBase && !localHasData()) bootOverlay(true);      // brand-new device: say what is happening
             synced = loadBase();
             try {
                 if (isDirty() || !hadBase) {
-                    // Unsent changes from last time (or first run of this version): compare with the sheet and merge.
+                    // Unsent changes from last time (or first run on this device): compare with the sheet and merge.
                     const res = await call('GET', { v: -1 });
                     if (res.empty) { setSynced({}); await push(true); }
                     else if (isDirty() && hadBase && res.version === version) { await push(false); }
@@ -6223,10 +6269,38 @@
                         applyRemote(res.state, res.version, mergeWire(hadBase ? syncedWire() : null, localW, res.state), hadBase ? null : localW);
                         if (j(snapshot(appState)) !== before) note('Unsynced changes were merged with the latest Google Sheet data.');
                     }
+                    ready = true;
                     if (!isDirty()) status('ok');
-                } else { await pull(true); }
+                } else { ready = true; await pull(true, true); }
             } catch (e) { status('error', e.message); }
+            bootOverlay(false);
+            initBusy = false;
             startPolling();
+        }
+
+        /* Download a copy of this app with the connected URL (and key) written into it, so it is built in for everyone. */
+        async function bake() {
+            if (!connected() || BUILT_IN) return;
+            if (!confirm('This downloads a copy of the app with your Google Sheets link' + (key ? ' and access key' : '') + ' written inside it.\n\nUpload it to where the app is hosted; then everyone who opens the app connects automatically. Anyone with the app\'s address will also be able to read and change the sheet data.\n\nContinue?')) return;
+            let src;
+            try {
+                const r = await fetch(location.href.split('#')[0].split('?')[0], { cache: 'no-store' });
+                if (!r.ok) throw new Error('HTTP ' + r.status);
+                src = await r.text();
+            } catch (e) {
+                note('Could not read the app file. Open the app from its web address (not as a file saved on this device) and try again, or paste the link into the line marked BUILT-IN GOOGLE SHEETS CONNECTION near the end of index.html.', 'error');
+                return;
+            }
+            const reU = new RegExp("const DEFAULT" + "_URL = '[^']*';"), reK = new RegExp("const DEFAULT" + "_KEY = '[^']*';");
+            if (!reU.test(src) || !reK.test(src)) { note('This copy of the app has no built-in link line to fill in.', 'error'); return; }
+            const esc = v => String(v).replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+            src = src.replace(reU, () => "const DEFAULT" + "_URL = '" + esc(url) + "';").replace(reK, () => "const DEFAULT" + "_KEY = '" + esc(key) + "';");
+            const a = document.createElement('a');
+            a.href = URL.createObjectURL(new Blob([src], { type: 'text/html' }));
+            a.download = 'index.html';
+            document.body.appendChild(a); a.click(); a.remove();
+            setTimeout(() => URL.revokeObjectURL(a.href), 4000);
+            note('Downloaded. Upload this index.html to your hosting to make the link built in for everyone.');
         }
 
         // keep the saved URL visible as soon as the page is there (before the app finishes loading)
@@ -6234,9 +6308,13 @@
 
         document.addEventListener('visibilitychange', () => { if (!document.hidden) pull(true); });
         window.addEventListener('focus', () => pull(true));
+        window.addEventListener('online', () => {
+            if (!connected()) return;
+            if (!ready) init(); else if (isDirty() && !pushing) push(false); else pull(true);
+        });
         window.addEventListener('beforeunload', e => { if (connected() && (pushing || timer && isDirty())) { e.preventDefault(); e.returnValue = ''; } });
 
-        return { init, connect, syncNow, uploadLocal, disconnect, queuePush };
+        return { init, connect, syncNow, uploadLocal, disconnect, queuePush, bake };
     })();
     window.Sheets = Sheets;   // `const` does not create a window property; app code looks it up there
     </script>
