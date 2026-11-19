@@ -323,7 +323,7 @@
         }
 
         /* ---- Install-as-app banner ---- */
-        #installBanner { position: fixed; z-index: 55; left: 12px; right: 12px; bottom: calc(12px + env(safe-area-inset-bottom, 0px)); max-width: 420px; margin-left: auto; background: #0f172a; color: #e2e8f0; border: 1px solid #334155; border-radius: 14px; box-shadow: 0 12px 32px rgba(0,0,0,.45); padding: 14px; display: none; gap: 12px; align-items: flex-start; }
+        #installBanner { position: fixed; z-index: 55; left: 12px; right: 12px; bottom: calc(44px + env(safe-area-inset-bottom, 0px)); max-width: 420px; margin-left: auto; background: #0f172a; color: #e2e8f0; border: 1px solid #334155; border-radius: 14px; box-shadow: 0 12px 32px rgba(0,0,0,.45); padding: 14px; display: none; gap: 12px; align-items: flex-start; }
         #installBanner.show { display: flex; }
         #installBanner .ib-ico { flex: none; width: 40px; height: 40px; border-radius: 10px; background: #f97316; color: #fff; display: flex; align-items: center; justify-content: center; font-size: 18px; }
         #installBanner .ib-t { font-weight: 700; font-size: 14px; color: #fff; }
@@ -445,9 +445,6 @@
                     </button>
                     <button type="button" id="themeToggleBtn" onclick="toggleTheme()" aria-label="Switch to light mode" title="Switch between light and dark mode" class="px-3 py-1.5 text-xs font-medium bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg border border-slate-700 transition flex items-center gap-1.5">
                         <i id="themeToggleIcon" class="fa-solid fa-sun"></i> <span id="themeToggleLabel" class="hidden sm:inline">Light mode</span>
-                    </button>
-                    <button onclick="clearAllData()" aria-label="Clear all data" class="px-3 py-1.5 text-xs font-medium bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg border border-slate-700 transition flex items-center gap-1.5">
-                        <i class="fa-solid fa-trash-can"></i> <span class="hidden sm:inline">Clear All Data</span>
                     </button>
                     <div class="relative">
                         <button onclick="toggleAlertPopover()" class="p-2 text-slate-400 hover:text-white relative bg-slate-800/80 hover:bg-slate-800 border border-slate-700 rounded-lg transition">
@@ -1565,9 +1562,42 @@
                             <input type="file" id="restoreFile" accept=".json,application/json" class="hidden" onchange="restoreBackup(this)">
                         </div>
                     </div>
+
+                    <div class="max-w-3xl mx-auto bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl">
+                        <details id="dangerZone">
+                            <summary class="cursor-pointer select-none font-bold text-white text-lg"><i class="fa-solid fa-triangle-exclamation text-rose-400 mr-2"></i>Danger Zone</summary>
+                            <div class="pt-4 space-y-4">
+                                <div>
+                                    <h4 class="font-bold text-slate-200 text-sm">Clear All Data PIN</h4>
+                                    <p class="text-xs mt-1"><span id="clrPinStatus" class="font-semibold"></span></p>
+                                </div>
+                                <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+                                    <div id="clrCurWrap" class="hidden"><label class="block text-xs text-slate-400 mb-1">Current PIN</label><input type="password" id="clrCur" inputmode="numeric" maxlength="8" autocomplete="off" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-sky-500"></div>
+                                    <div><label class="block text-xs text-slate-400 mb-1">New PIN (4–8 digits)</label><input type="password" id="clrNew" inputmode="numeric" maxlength="8" autocomplete="off" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-sky-500"></div>
+                                    <div><label class="block text-xs text-slate-400 mb-1">Repeat new PIN</label><input type="password" id="clrNew2" inputmode="numeric" maxlength="8" autocomplete="off" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-sky-500"></div>
+                                </div>
+                                <div class="flex flex-wrap gap-2 justify-end">
+                                    <button type="button" id="clrRemoveBtn" onclick="removeClearPin()" class="hidden px-4 py-2 text-xs font-semibold bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-lg border border-slate-700">Remove PIN</button>
+                                    <button type="button" onclick="saveClearPin()" class="px-4 py-2 text-xs font-semibold bg-sky-600 hover:bg-sky-500 text-white rounded-lg">Save PIN</button>
+                                </div>
+                                <div class="border-t border-slate-800 pt-4 space-y-3">
+                                    <div>
+                                        <h4 class="font-bold text-slate-200 text-sm">Clear All Data</h4>
+                                        <p class="text-xs text-slate-400 mt-1">Permanently deletes all vehicles, routes, deliveries, dispensing records and supplier purchase ledgers, and resets stock to zero. This cannot be undone. Download a backup first.</p>
+                                    </div>
+                                    <div id="clrEntryWrap" class="hidden max-w-xs"><label class="block text-xs text-slate-400 mb-1">Enter PIN to clear data</label><input type="password" id="clrEntry" inputmode="numeric" maxlength="8" autocomplete="off" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-sky-500"></div>
+                                    <button type="button" onclick="clearAllData()" class="px-4 py-2 text-xs font-semibold bg-rose-600 hover:bg-rose-500 text-white rounded-lg flex items-center gap-1.5"><i class="fa-solid fa-trash-can"></i> Clear All Data</button>
+                                </div>
+                            </div>
+                        </details>
+                    </div>
                 </section>
 
             </div>
+            <!-- Footer -->
+            <footer class="no-print shrink-0 border-t border-slate-800 bg-slate-900/60 px-3 py-1.5 text-center text-[11px] text-slate-500 leading-snug">
+                Designed and Optimised for efficiency by <span class="font-semibold text-slate-400">Maceink Tech</span> <span class="mx-1">&middot;</span> Tel: <a href="tel:+233545553048" class="hover:text-sky-400 whitespace-nowrap">+233545553048</a>
+            </footer>
         </main>
     </div>
 
@@ -2205,11 +2235,53 @@
             if (typeof Sheets !== 'undefined') Sheets.queuePush();   // sends changes to Google Sheets (if connected)
         }
 
+        // Clear All Data: lives in Thresholds & Config > Danger Zone, optionally protected by its own PIN
+        function clrPinIsSet() { return !!(appState.settings && appState.settings.clearPinHash); }
+        function clrPinMatches(p) { return clrPinIsSet() && pinHash(String(p)) === appState.settings.clearPinHash; }
+        function clrClearInputs() { ['clrCur', 'clrNew', 'clrNew2', 'clrEntry'].forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; }); }
+        function renderClearPinStatus() {
+            const set = clrPinIsSet();
+            const st = document.getElementById('clrPinStatus');
+            if (!st) return;
+            st.textContent = set ? 'PIN is active. It is asked before any data is cleared.' : 'No PIN set. Anyone who opens this card can clear the data.';
+            st.className = 'font-semibold ' + (set ? 'text-emerald-400' : 'text-amber-400');
+            document.getElementById('clrCurWrap').classList.toggle('hidden', !set);
+            document.getElementById('clrRemoveBtn').classList.toggle('hidden', !set);
+            document.getElementById('clrEntryWrap').classList.toggle('hidden', !set);
+        }
+        function saveClearPin() {
+            const n1 = document.getElementById('clrNew').value, n2 = document.getElementById('clrNew2').value;
+            if (clrPinIsSet() && !clrPinMatches(document.getElementById('clrCur').value)) { showNotification('Current PIN is incorrect.', 'error'); return; }
+            if (!/^\d{4,8}$/.test(n1)) { showNotification('PIN must be 4 to 8 digits.', 'error'); return; }
+            if (n1 !== n2) { showNotification('The two PINs do not match.', 'error'); return; }
+            appState.settings = { ...(appState.settings || {}), clearPinHash: pinHash(n1) };
+            clrClearInputs();
+            saveState();
+            renderClearPinStatus();
+            showNotification('Clear-data PIN saved.');
+        }
+        function removeClearPin() {
+            if (!clrPinMatches(document.getElementById('clrCur').value)) { showNotification('Enter the current PIN to remove it.', 'error'); return; }
+            appState.settings = { ...(appState.settings || {}), clearPinHash: '' };
+            clrClearInputs();
+            saveState();
+            renderClearPinStatus();
+            showNotification('Clear-data PIN removed.');
+        }
         function clearAllData() {
             if (typeof tlGuard === 'function' && tlGuard(clearAllData)) return;   // access PIN needed when a tab-lock PIN is set
+            if (clrPinIsSet() && !clrPinMatches(document.getElementById('clrEntry').value)) {
+                showNotification('Enter the correct PIN to clear all data.', 'error');
+                const el = document.getElementById('clrEntry'); if (el) { el.value = ''; el.focus(); }
+                return;
+            }
             if (!confirm('This permanently deletes ALL vehicles, routes, deliveries, dispensing records and supplier purchase ledgers, and resets stock to zero. Continue?')) return;
+            const keepPin = (appState.settings && appState.settings.clearPinHash) || '';
             appState = emptyState();
+            if (keepPin) appState.settings = { ...(appState.settings || {}), clearPinHash: keepPin };   // the PIN survives a clear
+            clrClearInputs();
             saveState();
+            renderClearPinStatus();
             showNotification('All data cleared. You can start entering real records.');
         }
 
@@ -5214,6 +5286,7 @@
             document.getElementById('cfgPetrolOpening').value = appState.tanks.Petrol.opening || 0;
             CARD_BASES.forEach(b => { document.getElementById('cfgCardThr_' + b).value = cardThreshold(b) || ''; });
             renderPinStatus();
+            renderClearPinStatus();
             if (typeof tlRenderSettings === 'function') tlRenderSettings();
         }
 
@@ -6164,7 +6237,7 @@
     </script>
 
     <!-- Google Sheets sync (talks to the Apps Script in app_script.txt) -->
-    <div id="sheetsPill" onclick="switchTab('settings')" class="no-print fixed bottom-3 left-3 z-40 cursor-pointer select-none px-3 py-1.5 rounded-full text-[11px] font-semibold bg-slate-800/90 border border-slate-700 text-slate-300 shadow-lg hidden"></div>
+    <div id="sheetsPill" onclick="switchTab('settings')" class="no-print fixed bottom-10 left-3 z-40 cursor-pointer select-none px-3 py-1.5 rounded-full text-[11px] font-semibold bg-slate-800/90 border border-slate-700 text-slate-300 shadow-lg hidden"></div>
     <div id="sheetsBoot" class="no-print hidden fixed inset-0 flex items-center justify-center text-center p-6" style="z-index:65;background:rgba(15,23,42,.94);color:#e2e8f0">
         <div><i class="fa-solid fa-spinner fa-spin" style="font-size:2rem;color:#38bdf8"></i>
             <p style="margin-top:.9rem;font-weight:600">Loading the latest data from Google Sheets&hellip;</p>
