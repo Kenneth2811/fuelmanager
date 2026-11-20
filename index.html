@@ -6723,7 +6723,7 @@
                 const before = j(snapshot(appState));
                 applyRemote(res.state, res.version); status('ok');
                 if (!silent) note('Latest data loaded from Google Sheets.');
-                else if (j(snapshot(appState)) !== before) note('Updated from Google Sheets.');
+                else if (j(snapshot(appState)) !== before) note('Updated from Database.');
             } catch (e) { status('error', e.message); if (!silent) note(e.message, 'error'); }
         }
 
