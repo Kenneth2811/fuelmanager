@@ -631,6 +631,18 @@
                             </form>
                         </div>
 
+                        <!-- Opening stock brought forward (one-time entry) -->
+                        <div id="obStockCard" class="lg:col-span-3 bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-xl">
+                            <div class="flex flex-wrap items-center justify-between gap-2 mb-3">
+                                <div>
+                                    <h3 class="font-bold text-white text-base"><i class="fa-solid fa-box-archive text-sky-400 mr-2"></i>Opening Stock (Brought Forward)</h3>
+                                    <p class="text-[11px] text-slate-400">One-time entry per fuel: the stock carried forward from the previous period. Once posted it is locked; changes need a reason, authorisation and are kept in the audit trail.</p>
+                                </div>
+                            </div>
+                            <div id="obStockBody" class="grid grid-cols-1 md:grid-cols-2 gap-3"></div>
+                            <details class="mt-3 text-xs text-slate-300"><summary class="cursor-pointer text-slate-400 hover:text-slate-200 font-semibold">Opening balances audit trail (stock &amp; supplier accounts)</summary><div id="obAudit" class="mt-2 space-y-1"></div></details>
+                        </div>
+
                         <!-- Deliveries History Table -->
                         <div id="receiveHistoryCard" class="lg:col-span-3 bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-xl flex flex-col">
                             <div class="flex flex-wrap items-center justify-between gap-2 mb-3">
@@ -711,6 +723,7 @@
                             <div class="flex flex-wrap gap-1.5 no-print">
                                 <button type="button" onclick="fpOpenEntry('dr')" title="Record a purchase / invoice from this supplier (debit)" class="px-3 py-1.5 text-xs font-semibold bg-amber-600 hover:bg-amber-500 text-white rounded-lg shadow-lg shadow-amber-600/20"><i class="fa-solid fa-plus mr-1"></i> Add Debit (purchase)</button>
                                 <button type="button" onclick="fpOpenEntry('cr')" title="Record a payment made to this supplier (credit)" class="px-3 py-1.5 text-xs font-semibold bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg shadow-lg shadow-emerald-600/20"><i class="fa-solid fa-hand-holding-dollar mr-1"></i> Make Payment (credit)</button>
+                                <button type="button" onclick="obpOpen()" title="One-time balance brought forward for this supplier" class="px-3 py-1.5 text-xs font-semibold bg-sky-600/20 hover:bg-sky-600/35 text-sky-200 rounded-lg border border-sky-500/30"><i class="fa-solid fa-scale-balanced mr-1"></i> Opening balance (B/F)</button>
                                 <button type="button" onclick="fpSortNow()" title="Put the ledger rows in date order" class="px-3 py-1.5 text-xs font-semibold bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-lg border border-slate-700"><i class="fa-solid fa-arrow-down-1-9 mr-1"></i> Sort by date</button>
                                 <button type="button" onclick="fpImportReceived()" title="Add purchases already recorded in Receive Fuel for this supplier" class="px-3 py-1.5 text-xs font-semibold bg-sky-600 hover:bg-sky-500 text-white rounded-lg"><i class="fa-solid fa-download mr-1"></i> Import from Stock Received</button>
                                 <button type="button" onclick="fpEditCurrent()" class="px-3 py-1.5 text-xs font-semibold bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-lg border border-slate-700"><i class="fa-solid fa-sliders mr-1"></i> Supplier &amp; payment terms</button>
@@ -1457,8 +1470,9 @@
                                         <input type="number" id="cfgDieselMin" required class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white">
                                     </div>
                                     <div>
-                                        <label class="block text-xs text-slate-400 mb-1">Opening Stock (Liters)</label>
-                                        <input type="number" id="cfgDieselOpening" min="0" step="0.1" required class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white">
+                                        <label class="block text-xs text-slate-400 mb-1">Opening Stock B/F (Liters) <i class="fa-solid fa-lock text-slate-500 ml-1"></i></label>
+<input type="number" id="cfgDieselOpening" readonly tabindex="-1" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-400 cursor-not-allowed">
+<p class="text-[10px] text-slate-500 mt-1">Posted once under Stock Received &gt; Opening Stock (Brought Forward).</p>
                                     </div>
                                 </div>
 
@@ -1474,8 +1488,9 @@
                                         <input type="number" id="cfgPetrolMin" required class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white">
                                     </div>
                                     <div>
-                                        <label class="block text-xs text-slate-400 mb-1">Opening Stock (Liters)</label>
-                                        <input type="number" id="cfgPetrolOpening" min="0" step="0.1" required class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white">
+                                        <label class="block text-xs text-slate-400 mb-1">Opening Stock B/F (Liters) <i class="fa-solid fa-lock text-slate-500 ml-1"></i></label>
+<input type="number" id="cfgPetrolOpening" readonly tabindex="-1" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-400 cursor-not-allowed">
+<p class="text-[10px] text-slate-500 mt-1">Posted once under Stock Received &gt; Opening Stock (Brought Forward).</p>
                                     </div>
                                 </div>
 
@@ -2271,7 +2286,8 @@
                 settings: { approvalPinHash: '' },
                 trucks: [],
                 destinations: [],
-                fuelPurchases: { suppliers: [], entries: [] }   // supplier accounts (credit terms) + purchase ledger
+                fuelPurchases: { suppliers: [], entries: [] },   // supplier accounts (credit terms) + purchase ledger
+                openingBalances: { stock: {}, suppliers: {} }   // one-time brought-forward entries (stock + supplier balances) with audit trail
             };
         }
         let currentTab = 'dashboard';
@@ -2562,6 +2578,7 @@
             renderDashboardChart();
             renderReports();
             if (typeof renderPurchases === 'function') renderPurchases();
+            if (typeof obRenderAll === 'function') obRenderAll();
         }
 
 
@@ -2769,6 +2786,7 @@
             const shortageRaw = g('rcvShortage');
             const shortage = shortageRaw === '' ? null : parseFloat(shortageRaw);
             if (shortage !== null && !(shortage >= 0)) { showNotification('Shortage quantity must be zero or more.', 'error'); return; }
+            { const _blk = obStockDateBlock(g('rcvFuelType'), g('rcvDate').slice(0, 10)); if (_blk) { showNotification(_blk, 'error'); return; } }
             const missing = [['rcvDate', 'date & time'], ['rcvSupplier', 'supplier'], ['rcvWaybill', 'waybill / invoice #'], ['rcvInvoiceDate', 'invoice date'], ['rcvOfficer', 'recipient officer'], ['rcvVehicle', 'delivery truck no.'], ['rcvDriver', 'driver']].filter(f => !g(f[0]));
             if (missing.length) { showNotification('Please fill in: ' + missing.map(f => f[1]).join(', ') + '.', 'error'); return; }
             pendingReceive = {
@@ -2894,7 +2912,8 @@
             const list = logs.filter(l => (fuel === 'ALL' || l.fuelType === fuel) &&
                 (!q || normKey([l.waybill, l.supplier, l.officer, l.vehicleNo, l.driver, l.approvedBy].join(' ')).includes(q)));
             const tbody = document.getElementById('receiveHistoryTable');
-            if (!list.length) {
+            const bfHtml = obHistoryRows(fuel, q);
+            if (!list.length && !bfHtml) {
                 tbody.innerHTML = `<tr><td colspan="8" class="py-8 text-center text-sm text-slate-500">${logs.length ? 'No deliveries match your search.' : 'No deliveries recorded yet.'}</td></tr>`;
                 return;
             }
@@ -2911,7 +2930,7 @@
                     <td class="py-3 px-3 text-xs text-slate-400">${esc(l.officer)}${l.approvedBy ? `<div class="text-[10px] text-emerald-500/80"><i class="fa-solid fa-circle-check mr-1"></i>${esc(l.approvedBy)}</div>` : ''}</td>
                     <td class="py-3 px-3 text-right"><button onclick="printGrn('${esc(l.id)}')" class="text-xs text-sky-400 hover:text-sky-300" title="Print Goods Received Note"><i class="fa-solid fa-print"></i></button></td>
                 </tr>`;
-            }).join('');
+            }).join('') + bfHtml;
         }
 
         function printGrn(id) {
@@ -3481,6 +3500,7 @@
             const remarks = document.getElementById('issRemarks').value.trim();
             const source = document.getElementById('issSource').value;
             const productType = document.getElementById('issProductType').value || 'N/A';
+            { const _blk = obStockDateBlock(fuelType, String(date).slice(0, 10), source); if (_blk) { alert(_blk); return; } }
 
             const isTrip = category === 'Vehicle' && purpose === 'Operations';
             let destination = isTrip
@@ -4340,7 +4360,7 @@
             const dIss = mainIssues().filter(l => l.fuelType === 'Diesel').reduce((a, b) => a + Number(b.quantity), 0);
             const dCalculatedClosing = dOpening + dRcv - dIss;
 
-            document.getElementById('recDieselOpening').innerText = dOpening.toLocaleString() + ' L';
+            document.getElementById('recDieselOpening').innerText = dOpening.toLocaleString() + ' L' + obStockAsAt('Diesel');
             document.getElementById('recDieselReceived').innerText = '+' + dRcv.toLocaleString() + ' L';
             document.getElementById('recDieselIssued').innerText = '-' + dIss.toLocaleString() + ' L';
             document.getElementById('recDieselClosing').innerText = dCalculatedClosing.toLocaleString() + ' L';
@@ -4351,7 +4371,7 @@
             const pIss = mainIssues().filter(l => l.fuelType === 'Petrol').reduce((a, b) => a + Number(b.quantity), 0);
             const pCalculatedClosing = pOpening + pRcv - pIss;
 
-            document.getElementById('recPetrolOpening').innerText = pOpening.toLocaleString() + ' L';
+            document.getElementById('recPetrolOpening').innerText = pOpening.toLocaleString() + ' L' + obStockAsAt('Petrol');
             document.getElementById('recPetrolReceived').innerText = '+' + pRcv.toLocaleString() + ' L';
             document.getElementById('recPetrolIssued').innerText = '-' + pIss.toLocaleString() + ' L';
             document.getElementById('recPetrolClosing').innerText = pCalculatedClosing.toLocaleString() + ' L';
@@ -5449,7 +5469,7 @@
             e.preventDefault();
             ['Diesel', 'Petrol'].forEach(f => {
                 const t = appState.tanks[f];
-                const newOpening = parseFloat(document.getElementById(`cfg${f}Opening`).value) || 0;
+                const newOpening = t.opening || 0;   // opening stock is only changed through the controlled Opening Stock B/F entry
                 t.current = r3(t.current + (newOpening - (t.opening || 0)));
                 t.opening = newOpening;
                 t.max = parseFloat(document.getElementById(`cfg${f}Max`).value);
@@ -5920,6 +5940,10 @@
             });
             tr.classList.toggle('fp-pay', r.isPay);
             tr.classList.toggle('fp-open', fpIsOpening(e));
+            if (obIsLockedEntry(e)) {
+                tr.querySelectorAll('input').forEach(inp => { inp.readOnly = true; inp.classList.add('fp-ro'); });
+                set('act', '<button type="button" onclick="obpOpen()" title="Locked opening balance. Click to correct it (reason + authorisation required)" class="text-amber-400 hover:text-amber-300 px-1"><i class="fa-solid fa-lock"></i></button>');
+            }
             const dueInp = tr.querySelector('input[data-c="2"]');
             if (dueInp && document.activeElement !== dueInp) { dueInp.value = fpFmtDate(r.due); dueInp.classList.toggle('auto', !e.due && !!r.due); }
         });
@@ -6002,9 +6026,10 @@
             const v = fpParseDate(txt); if (v === null) return 'bad';
             if (c === 2) { const nv = (v === fpAutoDue(e)) ? '' : v; if ((e.due || '') === nv) return 'same'; e.due = nv; return 'ok'; }
             const k = c === 0 ? 'inv' : 'recv';
+            if (v && !fpIsOpening(e)) { const bf = obSupDate(e.sid); if (bf && v < bf) return 'early'; }
             if ((e[k] || '') === v) return 'same'; e[k] = v; return 'ok';
         }
-        if (c === 3) { if ((e.desc || '') === txt) return 'same'; e.desc = txt; return 'ok'; }
+        if (c === 3) { if (fpIsOpening({ desc: txt }) && !fpIsOpening(e)) return 'obform'; if ((e.desc || '') === txt) return 'same'; e.desc = txt; return 'ok'; }
         const m = fpParseMoney(txt); if (m === null) return 'bad';
         const nv = m === '' || m === 0 ? null : m, k = c === 4 ? 'dr' : 'cr';
         if (!force && nv && ((c === 4 && +e.cr > 0) || (c === 5 && +e.dr > 0))) return 'conflict';
@@ -6024,9 +6049,14 @@
             if (!t.value.trim()) return;
             e = fpNewEntry(fpSelected); created = true;
         }
+        if (e && obIsLockedEntry(e)) { fpRefreshCell(t, e); return; }
         const res = fpApply(e, c, t.value);
         if (res === 'conflict') {
             showNotification('A payment (CR) must be on its own line, separate from a purchase (DR). Use the next row, or the Make Payment button.', 'error');
+            fpRefreshCell(t, created ? null : e); return;
+        }
+        if (res === 'early' || res === 'obform') {
+            showNotification(res === 'early' ? 'This date is before the supplier opening balance (B/F) date. Entries cannot be dated before it.' : 'Use the "Opening balance (B/F)" button to post a balance brought forward.', 'error');
             fpRefreshCell(t, created ? null : e); return;
         }
         if (res === 'bad') {
@@ -6057,6 +6087,7 @@
     function fpDeleteRow(id) {
         const d = fpData(), i = d.entries.findIndex(x => x.id === id); if (i < 0) return;
         const e = d.entries[i];
+        if (obIsLockedEntry(e)) { showNotification('The opening balance is locked. Use the lock icon to correct it with a reason and authorisation.', 'error'); return; }
         if ((e.desc || e.dr || e.cr) && !confirm('Delete this ledger row?' + (e.desc ? '\n\n' + e.desc : ''))) return;
         d.entries.splice(i, 1);
         fpPersist(); fpRenderGrid(); fpRenderTop();
@@ -6072,8 +6103,9 @@
         lines.forEach((ln, i) => {
             const cells = ln.split('\t');
             let e = ents[r0 + i];
+            if (e && obIsLockedEntry(e)) { bad++; return; }
             if (!e) { if (cells.every(x => !x.trim())) return; e = fpNewEntry(sid); d.entries.push(e); ents.push(e); }
-            cells.forEach((cx, j) => { const c = c0 + j; if (c <= FP_LAST_COL && fpApply(e, c, cx, true) === 'bad') bad++; });
+            cells.forEach((cx, j) => { const c = c0 + j; if (c <= FP_LAST_COL && ['bad', 'early', 'obform'].includes(fpApply(e, c, cx, true))) bad++; });
             rowsDone++;
         });
         fpPersist(); fpRenderGrid(); fpRenderTop();
@@ -6208,6 +6240,7 @@
         if (cr && !e.inv) { showNotification('Choose the payment date.', 'error'); fpEl('fpEnPayDate').focus(); return; }
         if (cr && !fpEl('fpEnRef').value.trim()) { showNotification('Enter the payment method / reference (e.g. cheque no., MoMo, transfer).', 'error'); fpEl('fpEnRef').focus(); return; }
         if (!cr && !e.inv && !e.recv) { showNotification('Enter the invoice date or the received date.', 'error'); return; }
+        { const bf = obSupDate(s.id); if (bf && ((e.inv && e.inv < bf) || (e.recv && e.recv < bf))) { showNotification(`The opening balance for this supplier is brought forward as at ${fpFmtDate(bf)}. Entries cannot be dated before that.`, 'error'); return; } }
         if (cr) {
             const bal = fpCompute(s.id).bal;
             if (e.inv > localDateStr() && !confirm('This payment is dated in the future, but it will reduce the balance owed straight away.\n\nContinue?')) return;
@@ -6276,6 +6309,7 @@
         if (!confirm(`Delete supplier "${s.name}"${n ? ` and its ${n} ledger row(s)` : ''}? This cannot be undone.`)) return;
         const d = fpData();
         d.suppliers = d.suppliers.filter(x => x.id !== s.id); d.entries = d.entries.filter(e => e.sid !== s.id);
+        try { delete obData().suppliers[s.id]; } catch (er) {}
         if (fpSelected === s.id) fpSelected = d.suppliers[0] ? d.suppliers[0].id : null;
         fpPersist(); fpCloseSupplier(); fpRenderTop(); fpRenderGrid();
     }
@@ -6304,7 +6338,7 @@
     /* ---------- clear ledger records (same PIN logic as the other clear functions) ---------- */
     function fpClearScopeEntries(scope) {
         const d = fpData();
-        return scope === 'ALL' ? d.entries.slice() : d.entries.filter(e => e.sid === scope);
+        return (scope === 'ALL' ? d.entries.slice() : d.entries.filter(e => e.sid === scope)).filter(e => !obIsLockedEntry(e));   // a posted opening balance is never bulk-cleared
     }
     function fpExportEntryRows(entries, name) {
         const d = fpData();
@@ -6391,6 +6425,323 @@
     }
     document.addEventListener('DOMContentLoaded', fpInitGrid);
     </script>
+
+<script>
+/* =====================================================================
+   OPENING BALANCES (brought forward) - one-time entries
+   1) Stock B/F per fuel: litres, unit cost, as-at date, source document, prepared / authorised by.
+   2) Supplier balance B/F: balance owed (or advance paid) as at a cut-over date, posted as the first line of the ledger.
+   Once posted a record is locked. A correction needs a reason, authorisation (and the approval PIN when set) and is kept in the audit trail.
+   ===================================================================== */
+const OB_IN = 'w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-sm text-slate-100 focus:outline-none focus:border-sky-500';
+const obEl = id => document.getElementById(id);
+const obVal = id => (obEl(id).value || '').trim().replace(/\s+/g, ' ');
+const obStamp = iso => { try { return new Date(iso).toLocaleString('en-GB', { timeZone: GH_TZ }); } catch (e) { return iso || ''; } };
+let obAttempts = 0, obsCorrect = false, obpCorrect = false;
+
+function obData() {
+    let d = appState.openingBalances;
+    if (!d || typeof d !== 'object') d = appState.openingBalances = {};
+    if (!d.stock || typeof d.stock !== 'object') d.stock = {};
+    if (!d.suppliers || typeof d.suppliers !== 'object') d.suppliers = {};
+    return d;
+}
+function obStockRec(f) {
+    const r = obData().stock[f], t = appState.tanks[f] || {};
+    if (r) return r;
+    if (Number(t.opening) > 0) return { legacy: true, date: '', qty: Number(t.opening), cost: null, value: null, ref: '', history: [] };
+    return null;
+}
+function obStockAsAt(f) { const r = obData().stock[f]; return r && r.date ? ` (B/F ${fpFmtDate(r.date)})` : ''; }
+function obFirstTxn(f) {
+    let m = '';
+    const take = l => { const d = String(l.date || '').slice(0, 10); if (l.fuelType === f && d && (!m || d < m)) m = d; };
+    (appState.receiveLogs || []).forEach(take); mainIssues().forEach(take);
+    return m;
+}
+function obStockDateBlock(f, day, source) {
+    if (source && source !== MAIN_BASE) return '';
+    const r = obData().stock[f]; if (!r || !r.date || !day) return '';
+    return day < r.date ? `The opening stock for ${f} is brought forward as at ${fpFmtDate(r.date)}. Entries cannot be dated before that.` : '';
+}
+function obHistoryRows(fuel, q) {
+    if (q) return '';
+    return ['Diesel', 'Petrol'].filter(f => fuel === 'ALL' || fuel === f).map(f => {
+        const r = obData().stock[f]; if (!r || !r.date) return '';
+        return `<tr class="bg-sky-500/5"><td class="py-3 px-3 text-xs text-slate-300 font-medium">${esc(fpFmtDate(r.date))}</td>
+            <td class="py-3 px-3 font-mono text-xs text-sky-400">B/F<div class="text-[10px] text-slate-500 font-sans">${esc(r.ref || '')}</div></td>
+            <td class="py-3 px-3 text-slate-200">Opening balance brought forward</td>
+            <td class="py-3 px-3"><span class="px-2 py-0.5 text-[10px] font-semibold rounded ${f === 'Diesel' ? 'bg-amber-500/10 text-amber-400 border border-amber-500/20' : 'bg-sky-500/10 text-sky-400 border border-sky-500/20'}">${f}</span></td>
+            <td class="py-3 px-3 text-right font-bold text-sky-300">+${Number(r.qty).toLocaleString()}</td>
+            <td class="py-3 px-3 text-right text-xs text-slate-300">${fmt(r.value, 2)}</td>
+            <td class="py-3 px-3 text-xs text-slate-400">${esc(r.preparedBy || '')}<div class="text-[10px] text-emerald-500/80"><i class="fa-solid fa-lock mr-1"></i>${esc(r.approvedBy || '')}</div></td>
+            <td class="py-3 px-3 text-right"><button onclick="obPrintStockVoucher('${f}')" class="text-xs text-sky-400 hover:text-sky-300" title="Print opening balance voucher"><i class="fa-solid fa-print"></i></button></td></tr>`;
+    }).join('');
+}
+
+/* ---------- modal shells (built once) ---------- */
+function obField(label, inner, hint, id) {
+    return `<div${id ? ` id="${id}"` : ''}><label class="block text-xs font-semibold text-slate-300 mb-1">${label}</label>${inner}${hint ? `<p class="text-[10px] text-slate-500 mt-1">${hint}</p>` : ''}</div>`;
+}
+const obStar = ' <span class="text-rose-400">*</span>';
+function obCommonTail(p, chk) {
+    return `<div id="${p}ReasonWrap" class="hidden p-3 rounded-xl bg-amber-500/5 border border-amber-500/30">
+            <label class="block text-xs font-semibold text-amber-300 mb-1">Reason for the correction${obStar}</label>
+            <textarea id="${p}Reason" rows="2" maxlength="300" oninput="${chk}()" placeholder="Why is the posted opening balance being changed?" class="${OB_IN}"></textarea>
+            <div id="${p}Hist" class="mt-2 text-[10px] text-slate-400"></div></div>
+        <div class="grid grid-cols-2 gap-3">
+            ${obField('Prepared by' + obStar, `<input type="text" id="${p}Prep" oninput="${chk}()" autocomplete="off" class="${OB_IN}">`)}
+            ${obField('Authorised by' + obStar, `<input type="text" id="${p}Auth" oninput="${chk}()" autocomplete="off" class="${OB_IN}">`)}
+        </div>
+        <div id="${p}Preview" class="rounded-xl border border-slate-700 bg-slate-950 p-3 text-xs text-slate-300"></div>
+        <div class="grid grid-cols-2 gap-3">
+            ${obField('Re-type the ' + (p === 'obs' ? 'quantity (L)' : 'amount') + obStar, `<input type="text" id="${p}Retype" inputmode="decimal" oninput="${chk}()" autocomplete="off" class="${OB_IN}">`)}
+            <div id="${p}PinWrap" class="hidden">${obField('Approval PIN' + obStar, `<input type="password" id="${p}Pin" oninput="${chk}()" autocomplete="off" class="${OB_IN}">`)}<p id="${p}PinNote" class="hidden text-[10px] text-rose-400 mt-1"></p></div>
+        </div>
+        <label class="flex items-start gap-2 text-[11px] text-slate-300 cursor-pointer"><input type="checkbox" id="${p}Ack" onchange="${chk}()" class="mt-0.5 accent-sky-500"><span>I confirm this is a one-time brought-forward entry taken from a verified source document. It will be locked, and any later change is recorded in the audit trail.</span></label>`;
+}
+function obBuildModals() {
+    if (obEl('obStockModal')) return;
+    const shell = (id, close, title, body, btn, submit) => `<div id="${id}" class="hidden fixed inset-0 z-[70] bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4 no-print">
+        <div class="w-full max-w-lg max-h-[92vh] overflow-y-auto custom-scrollbar bg-slate-900 border border-slate-700 rounded-2xl p-5 shadow-2xl">
+            <div class="flex items-center justify-between mb-1"><h3 id="${id}Title" class="font-bold text-white text-base">${title}</h3><button type="button" onclick="${close}()" class="text-slate-400 hover:text-white" title="Close"><i class="fa-solid fa-xmark"></i></button></div>
+            <p id="${id}Sub" class="text-xs text-slate-400 mb-3"></p>
+            <form onsubmit="${submit}(event)" class="space-y-3">${body}
+                <div class="flex justify-end gap-2 pt-1"><button type="button" onclick="${close}()" class="px-4 py-2 text-xs font-semibold bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-lg border border-slate-700">Cancel</button>
+                <button type="submit" id="${btn}" disabled class="px-4 py-2 text-xs font-semibold text-white rounded-lg bg-sky-600 hover:bg-sky-500 disabled:bg-slate-800 disabled:text-slate-500 disabled:cursor-not-allowed"><i class="fa-solid fa-lock mr-1"></i> Post &amp; lock</button></div>
+            </form></div></div>`;
+    const stock = `<div class="grid grid-cols-2 gap-3">
+            ${obField('Fuel' + obStar, `<select id="obsFuel" onchange="obsFuelChanged()" class="${OB_IN}"><option value="Diesel">Diesel (AGO)</option><option value="Petrol">Petrol (PMS)</option></select>`)}
+            ${obField('Brought forward as at' + obStar, `<input type="date" id="obsDate" oninput="obsCheck()" class="${OB_IN}">`, 'Cut-over date: the first transaction must fall on or after it.')}
+            ${obField('Quantity (Liters)' + obStar, `<input type="number" id="obsQty" min="0.1" step="0.1" oninput="obsCheck()" placeholder="e.g. 12500" class="${OB_IN}">`)}
+            ${obField('Unit cost per liter (GH₵)' + obStar, `<input type="number" id="obsCost" min="0.0001" step="0.0001" oninput="obsCheck()" placeholder="e.g. 14.50" class="${OB_IN}">`, 'Used to value the opening stock.')}
+        </div>
+        ${obField('Source document / reference' + obStar, `<input type="text" id="obsRef" oninput="obsCheck()" placeholder="e.g. Closing dip reading sheet 31/10/2026, stock count no." autocomplete="off" class="${OB_IN}">`)}
+        ${obField('Narration <span class="text-slate-500 font-normal">(optional)</span>', `<input type="text" id="obsNarr" autocomplete="off" class="${OB_IN}">`)}
+        ${obCommonTail('obs', 'obsCheck')}`;
+    const sup = `<div class="grid grid-cols-2 gap-3">
+            ${obField('Brought forward as at' + obStar, `<input type="date" id="obpDate" oninput="obpCheck()" class="${OB_IN}">`, 'Cut-over date: other entries must fall on or after it.')}
+            ${obField('Balance type' + obStar, `<select id="obpSide" onchange="obpCheck()" class="${OB_IN}"><option value="owed">We owe the supplier (payable)</option><option value="advance">Supplier owes us (advance paid)</option></select>`)}
+            ${obField('Amount (GH₵)' + obStar, `<input type="text" id="obpAmt" inputmode="decimal" oninput="obpCheck()" placeholder="0.00" autocomplete="off" class="${OB_IN}">`)}
+            ${obField('Payment due date <span class="text-slate-500 font-normal">(optional)</span>', `<input type="date" id="obpDue" oninput="obpCheck()" class="${OB_IN}">`, 'Only for a balance owed; leave empty if no due date is known.', 'obpDueWrap')}
+        </div>
+        ${obField('Source document / reference' + obStar, `<input type="text" id="obpRef" oninput="obpCheck()" placeholder="e.g. Supplier statement 31/10/2026" autocomplete="off" class="${OB_IN}">`)}
+        ${obCommonTail('obp', 'obpCheck')}`;
+    document.body.insertAdjacentHTML('beforeend',
+        shell('obStockModal', 'obsClose', 'Opening stock (brought forward)', stock, 'obsBtn', 'obsSubmit') +
+        shell('obSupModal', 'obpClose', 'Opening balance (brought forward)', sup, 'obpBtn', 'obpSubmit'));
+}
+
+/* ---------- shared helpers ---------- */
+function obPinCheck(p) {
+    if (!pinIsSet()) return true;
+    if (pinMatches(obEl(p + 'Pin').value)) return true;
+    obAttempts++;
+    const n = obEl(p + 'PinNote');
+    if (obAttempts >= 3) { obAttempts = 0; (p === 'obs' ? obsClose : obpClose)(); showNotification('Too many wrong PIN attempts. Nothing was posted.', 'error'); return false; }
+    n.textContent = `Incorrect PIN. ${3 - obAttempts} attempt(s) left.`; n.classList.remove('hidden'); obEl(p + 'Pin').value = '';
+    return false;
+}
+function obHistHtml(h) {
+    if (!h || !h.length) return '';
+    return '<p class="font-semibold uppercase tracking-wider text-slate-500 mb-1">Previous changes</p>' + h.slice().reverse().map(x => `<div class="py-0.5 border-t border-slate-800">${esc(obStamp(x.at))} · ${esc(x.action)} · ${esc(x.by || '')}${x.reason ? ' · ' + esc(x.reason) : ''}</div>`).join('');
+}
+function obPrintVoucher(title, ref, rows) {
+    const w = window.open('', '_blank');
+    if (!w) { showNotification('Allow pop-ups to print the voucher.', 'error'); return; }
+    const row = (k, v) => `<tr><th style="text-align:left;padding:6px 10px;border:1px solid #bbb;width:36%;background:#f3f4f6">${k}</th><td style="padding:6px 10px;border:1px solid #bbb">${v}</td></tr>`;
+    w.document.write(`<!DOCTYPE html><html><head><title>${esc(title)} ${esc(ref)}</title></head><body style="font-family:Arial,sans-serif;padding:30px;max-width:720px;margin:auto">
+        <h2 style="margin:0">${esc(title)}</h2><p style="margin:4px 0 18px;color:#555;font-size:13px">Ref: ${esc(ref)}</p>
+        <table style="border-collapse:collapse;width:100%;font-size:14px">${rows.map(r => row(r[0], r[1])).join('')}</table>
+        <div style="display:flex;justify-content:space-between;margin-top:60px;font-size:13px"><div style="border-top:1px solid #000;padding-top:6px;width:40%">Prepared by (signature)</div><div style="border-top:1px solid #000;padding-top:6px;width:40%">Authorised by (signature)</div></div></body></html>`);
+    w.document.close(); w.focus(); setTimeout(() => w.print(), 300);
+}
+
+/* ================= STOCK B/F ================= */
+function obRenderStock() {
+    const el = obEl('obStockBody'); if (!el) return;
+    el.innerHTML = ['Diesel', 'Petrol'].map(f => {
+        const r = obStockRec(f), t = appState.tanks[f], col = f === 'Diesel' ? 'bg-amber-500' : 'bg-sky-500';
+        const line = (a, b) => `<div class="flex justify-between gap-3"><span class="text-slate-400">${a}</span><span class="text-slate-200 text-right">${b}</span></div>`;
+        let body, btns;
+        if (!r) {
+            body = '<p class="text-amber-300 text-xs">Not yet posted. Post the stock you are carrying forward before recording deliveries and issues.</p>';
+            btns = `<button type="button" onclick="obsOpen('${f}', false)" class="px-3 py-1.5 text-xs font-semibold bg-sky-600 hover:bg-sky-500 text-white rounded-lg"><i class="fa-solid fa-plus mr-1"></i> Post opening stock</button>`;
+        } else if (r.legacy) {
+            body = line('Opening stock', fmt(r.qty, 2) + ' L') + '<p class="text-amber-300 text-xs mt-1">Set earlier in Settings, without date, cost or authorisation. Formalise it to lock it.</p>';
+            btns = `<button type="button" onclick="obsOpen('${f}', true)" class="px-3 py-1.5 text-xs font-semibold bg-sky-600 hover:bg-sky-500 text-white rounded-lg"><i class="fa-solid fa-file-signature mr-1"></i> Formalise &amp; lock</button>`;
+        } else {
+            body = line('Quantity', fmt(r.qty, 2) + ' L') + line('As at', fpFmtDate(r.date)) + line('Unit cost', money(r.cost) + ' / L') + line('Stock value', `<strong>${money(r.value)}</strong>`) +
+                line('Source', esc(r.ref || '')) + line('Prepared / authorised', esc((r.preparedBy || '') + ' / ' + (r.approvedBy || ''))) +
+                (Math.abs((Number(t.opening) || 0) - r.qty) > 0.0005 ? `<p class="text-rose-300 text-xs mt-1">The tank opening (${fmt(t.opening, 2)} L) differs from this posted entry. Review it.</p>` : '');
+            btns = `<button type="button" onclick="obsOpen('${f}', true)" class="px-3 py-1.5 text-xs font-semibold bg-slate-800 hover:bg-slate-700 text-amber-300 rounded-lg border border-slate-700"><i class="fa-solid fa-pen mr-1"></i> Correct</button>
+                <button type="button" onclick="obPrintStockVoucher('${f}')" class="px-3 py-1.5 text-xs font-semibold bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-lg border border-slate-700"><i class="fa-solid fa-print mr-1"></i> Voucher</button>`;
+        }
+        return `<div class="bg-slate-950 border border-slate-800 rounded-xl p-4 space-y-1.5 text-xs">
+            <div class="flex items-center justify-between border-b border-slate-800 pb-2 mb-1"><span class="font-bold text-slate-200 text-sm flex items-center gap-2"><span class="h-2.5 w-2.5 rounded-full ${col}"></span>${f}</span>
+            ${r && !r.legacy ? '<span class="text-[10px] px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-400 font-semibold"><i class="fa-solid fa-lock mr-1"></i>Posted &amp; locked</span>' : ''}</div>
+            ${body}<div class="flex flex-wrap gap-1.5 pt-2">${btns}</div></div>`;
+    }).join('');
+}
+function obRenderAudit() {
+    const el = obEl('obAudit'); if (!el) return;
+    const d = obData(), items = [];
+    Object.keys(d.stock).forEach(f => ((d.stock[f] || {}).history || []).forEach(h => items.push({ ...h, what: 'Stock B/F: ' + f })));
+    Object.keys(d.suppliers).forEach(id => { const s = fpSupplier(id); ((d.suppliers[id] || {}).history || []).forEach(h => items.push({ ...h, what: 'Supplier B/F: ' + (s ? s.name : '(deleted supplier)') })); });
+    items.sort((a, b) => String(b.at).localeCompare(String(a.at)));
+    el.innerHTML = items.length ? items.map(h => `<div class="bg-slate-950 border border-slate-800 rounded-lg px-3 py-2"><span class="text-slate-500">${esc(obStamp(h.at))}</span> · <strong class="text-slate-200">${esc(h.what)}</strong> · ${esc(h.action)} by ${esc(h.by || '')}${h.prep ? ' (prepared by ' + esc(h.prep) + ')' : ''}<div class="text-slate-400">${esc(h.change || '')}${h.reason ? ' · Reason: ' + esc(h.reason) : ''}</div></div>`).join('') : '<p class="text-slate-500">No opening balance entries yet.</p>';
+}
+function obsClose() { obEl('obStockModal').classList.add('hidden'); }
+function obsOpen(f, correct) {
+    obBuildModals();
+    const r = obStockRec(f), t = appState.tanks[f];
+    if (!correct && r && !r.legacy) { correct = true; }
+    obsCorrect = !!(correct && r);
+    obAttempts = 0;
+    ['obsRetype', 'obsPin', 'obsReason', 'obsNarr'].forEach(id => { obEl(id).value = ''; });
+    obEl('obsAck').checked = false; obEl('obsPinNote').classList.add('hidden');
+    obEl('obsFuel').value = f; obEl('obsFuel').disabled = true;
+    const real = r && !r.legacy ? r : null;
+    obEl('obsDate').value = real ? real.date : '';
+    obEl('obsQty').value = r ? r.qty : ''; obEl('obsCost').value = real ? real.cost : '';
+    obEl('obsRef').value = real ? real.ref : ''; obEl('obsNarr').value = real ? (real.narration || '') : '';
+    obEl('obsPrep').value = ''; obEl('obsAuth').value = '';
+    obEl('obsPinWrap').classList.toggle('hidden', !pinIsSet());
+    obEl('obsReasonWrap').classList.toggle('hidden', !(obsCorrect && real));
+    obEl('obsHist').innerHTML = real ? obHistHtml(real.history) : '';
+    obEl('obStockModalTitle').textContent = obsCorrect ? (real ? `Correct opening stock: ${f}` : `Formalise opening stock: ${f}`) : `Post opening stock: ${f}`;
+    obEl('obStockModalSub').textContent = `Tank now holds ${fmt(t.current, 2)} L. ` + (real ? 'This posted entry is locked: changes need a reason and authorisation.' : 'This is a one-time entry.');
+    obsCheck();
+    obEl('obStockModal').classList.remove('hidden');
+}
+function obsFuelChanged() { obsCheck(); }
+function obsRead() {
+    return { f: obEl('obsFuel').value, date: obEl('obsDate').value, qty: parseFloat(obEl('obsQty').value), cost: parseFloat(obEl('obsCost').value),
+        ref: obVal('obsRef'), narr: obVal('obsNarr'), prep: obVal('obsPrep'), auth: obVal('obsAuth'), reason: obVal('obsReason') };
+}
+function obsCheck() {
+    const d = obsRead(), t = appState.tanks[d.f]; if (!t) return false;
+    const old = Number(t.opening) || 0, qOk = d.qty > 0, cOk = d.cost > 0;
+    const line = (a, b, cl) => `<div class="flex justify-between gap-3 py-0.5"><span class="text-slate-400">${a}</span><span class="font-semibold ${cl || 'text-slate-200'}">${b}</span></div>`;
+    let h = line('Tank level now', fmt(t.current, 2) + ' L') + line('Opening stock now', fmt(old, 2) + ' L');
+    if (qOk) { const after = r3(t.current + d.qty - old); h += line('Opening stock after posting', fmt(d.qty, 2) + ' L', 'text-sky-300') + line('Tank level after posting', fmt(after, 2) + ' L', after < 0 ? 'text-rose-400' : 'text-emerald-300'); }
+    if (qOk && cOk) h += line('Opening stock value', money(r2(d.qty * d.cost)), 'text-amber-300');
+    if (d.prep && d.auth && normKey(d.prep) === normKey(d.auth)) h += '<p class="text-amber-300 mt-1">Preparer and authoriser are the same person. A second person should authorise where possible.</p>';
+    obEl('obsPreview').innerHTML = h;
+    const rt = obEl('obsRetype').value;
+    const ok = !!d.date && qOk && cOk && !!d.ref && !!d.prep && !!d.auth && rt !== '' && Math.abs(parseFloat(rt) - d.qty) < 1e-9 && obEl('obsAck').checked &&
+        (obEl('obsReasonWrap').classList.contains('hidden') || d.reason.length >= 5) &&
+        (!pinIsSet() || obEl('obsPin').value !== '');
+    obEl('obsBtn').disabled = !ok; return ok;
+}
+function obsSubmit(ev) {
+    ev.preventDefault(); if (!obsCheck()) return;
+    const d = obsRead(), t = appState.tanks[d.f], today = localDateStr(), old = Number(t.opening) || 0;
+    if (d.date > today) { showNotification('The brought-forward date cannot be in the future.', 'error'); return; }
+    const first = obFirstTxn(d.f);
+    if (first && d.date > first) { showNotification(`There are ${d.f} records dated ${fpFmtDate(first)}. The opening stock date must be on or before the first record.`, 'error'); return; }
+    const after = r3(t.current + d.qty - old);
+    if (after < 0) { showNotification(`This would make the ${d.f} tank level negative (${fmt(after, 2)} L). Check the quantity.`, 'error'); return; }
+    if (after > t.max && !confirm(`The tank level after posting (${fmt(after, 2)} L) is above the tank capacity (${fmt(t.max, 2)} L). Continue?`)) return;
+    if (!obPinCheck('obs')) return;
+    const prev = obData().stock[d.f], now = new Date().toISOString();
+    const hist = (prev && prev.history ? prev.history.slice() : []);
+    const snap = x => x ? `${fmt(x.qty, 2)} L @ ${fmt(x.cost, 4)}` : `${fmt(old, 2)} L (Settings)`;
+    const rec = { date: d.date, qty: d.qty, cost: d.cost, value: r2(d.qty * d.cost), ref: d.ref, narration: d.narr, preparedBy: d.prep, approvedBy: d.auth, postedAt: (prev && prev.postedAt) || now, history: hist };
+    hist.push({ at: now, action: prev ? 'corrected' : (old > 0 ? 'formalised' : 'posted'), by: d.auth, prep: d.prep, reason: prev ? d.reason : '', change: `${prev ? snap(prev) : (old > 0 ? snap(null) : 'nil')} → ${fmt(d.qty, 2)} L @ ${fmt(d.cost, 4)} as at ${fpFmtDate(d.date)}` });
+    obData().stock[d.f] = rec;
+    t.opening = d.qty; t.current = after;
+    obsClose(); saveState();
+    showNotification(`Opening stock of ${fmt(d.qty, 2)} L (${d.f}) posted and locked.`);
+    if (confirm('Print the opening balance voucher now?')) obPrintStockVoucher(d.f);
+}
+function obPrintStockVoucher(f) {
+    const r = obData().stock[f]; if (!r) return;
+    obPrintVoucher('Opening Stock Voucher (Brought Forward)', `OB-STK-${f.toUpperCase()}-${r.date}`, [
+        ['Fuel', esc(f)], ['Brought forward as at', fpFmtDate(r.date)], ['Quantity', fmt(r.qty, 2) + ' L'], ['Unit cost', money(r.cost) + ' / L'], ['Stock value', money(r.value)],
+        ['Source document', esc(r.ref || '')], ['Narration', esc(r.narration || '')], ['Prepared by', esc(r.preparedBy || '')], ['Authorised by', esc(r.approvedBy || '')],
+        ['Posted', esc(obStamp(r.postedAt))], ['Corrections', String((r.history || []).filter(h => h.action === 'corrected').length)]]);
+}
+
+/* ================= SUPPLIER B/F ================= */
+function obSupRec(sid) {
+    const ents = fpData().entries, r = obData().suppliers[sid];
+    if (r) { const e = ents.find(x => x.id === r.entryId); if (e) return { r, e }; }
+    const leg = ents.find(x => x.sid === sid && fpIsOpening(x));
+    return leg ? { r: null, e: leg, legacy: true } : null;
+}
+function obIsLockedEntry(e) { const r = e && obData().suppliers[e.sid]; return !!(r && r.entryId === e.id); }
+function obSupDate(sid) { const i = obSupRec(sid); return i && i.r ? i.r.date : ''; }
+function obpClose() { obEl('obSupModal').classList.add('hidden'); }
+function obpOpen() {
+    const s = fpSupplier(fpSelected); if (!s) { showNotification('Add a supplier first.', 'error'); return; }
+    obBuildModals();
+    const info = obSupRec(s.id), real = info && info.r ? info : null;
+    obpCorrect = !!info; obAttempts = 0;
+    ['obpRetype', 'obpPin', 'obpReason', 'obpPrep', 'obpAuth'].forEach(id => { obEl(id).value = ''; });
+    obEl('obpAck').checked = false; obEl('obpPinNote').classList.add('hidden');
+    if (info) {
+        const e = info.e, adv = +e.cr > 0 && !(+e.dr > 0);
+        obEl('obpDate').value = real ? real.r.date : (e.inv || e.recv || ''); obEl('obpSide').value = adv ? 'advance' : 'owed';
+        obEl('obpAmt').value = String(adv ? e.cr : (e.dr || '')); obEl('obpDue').value = e.due || '';
+        obEl('obpRef').value = real ? real.r.ref : String(e.desc || '').replace(/^\s*balance\s*b\s*\/?\s*f\s*[-:]?\s*/i, '');
+    } else { ['obpDate', 'obpAmt', 'obpDue', 'obpRef'].forEach(id => { obEl(id).value = ''; }); obEl('obpSide').value = 'owed'; }
+    obEl('obpPinWrap').classList.toggle('hidden', !pinIsSet());
+    obEl('obpReasonWrap').classList.toggle('hidden', !real);
+    obEl('obpHist').innerHTML = real ? obHistHtml(real.r.history) : '';
+    obEl('obSupModalTitle').textContent = real ? 'Correct opening balance' : (info ? 'Formalise opening balance' : 'Opening balance (brought forward)');
+    obEl('obSupModalSub').textContent = s.name + (real ? ' · locked: changes need a reason and authorisation.' : ' · one-time entry, posted as the first line of the ledger.');
+    obpCheck();
+    obEl('obSupModal').classList.remove('hidden');
+}
+function obpRead() {
+    return { date: obEl('obpDate').value, side: obEl('obpSide').value, amt: fpParseMoney(obEl('obpAmt').value), due: obEl('obpDue').value, ref: obVal('obpRef'), prep: obVal('obpPrep'), auth: obVal('obpAuth'), reason: obVal('obpReason') };
+}
+function obpCheck() {
+    const s = fpSupplier(fpSelected); if (!s) return false;
+    const d = obpRead(), info = obSupRec(s.id), owed = d.side === 'owed';
+    obEl('obpDueWrap').classList.toggle('hidden', !owed);
+    const cur = fpCompute(s.id).bal, oldSigned = info ? (+info.e.dr || 0) - (+info.e.cr || 0) : 0;
+    const line = (a, b, cl) => `<div class="flex justify-between gap-3 py-0.5"><span class="text-slate-400">${a}</span><span class="font-semibold ${cl || 'text-slate-200'}">${b}</span></div>`;
+    let h = line('Ledger balance now', money(cur));
+    const aOk = typeof d.amt === 'number' && d.amt > 0;
+    if (aOk) { const after = r2(cur - oldSigned + (owed ? d.amt : -d.amt)); h += line(after < 0 ? 'Advance / credit after posting' : 'Balance owed after posting', money(Math.abs(after)), after > 0 ? 'text-amber-300' : 'text-emerald-300'); }
+    if (d.prep && d.auth && normKey(d.prep) === normKey(d.auth)) h += '<p class="text-amber-300 mt-1">Preparer and authoriser are the same person. A second person should authorise where possible.</p>';
+    obEl('obpPreview').innerHTML = h;
+    const rt = fpParseMoney(obEl('obpRetype').value), hasReason = !obEl('obpReasonWrap').classList.contains('hidden');
+    const ok = !!d.date && aOk && !!d.ref && !!d.prep && !!d.auth && typeof rt === 'number' && rt === d.amt && obEl('obpAck').checked && (!hasReason || d.reason.length >= 5) && (!pinIsSet() || obEl('obpPin').value !== '');
+    obEl('obpBtn').disabled = !ok; return ok;
+}
+function obpSubmit(ev) {
+    ev.preventDefault(); if (!obpCheck()) return;
+    const s = fpSupplier(fpSelected), d = obpRead(), info = obSupRec(s.id), owed = d.side === 'owed';
+    if (d.date > localDateStr()) { showNotification('The brought-forward date cannot be in the future.', 'error'); return; }
+    if (owed && d.due && d.due < d.date) { showNotification('The payment due date cannot be before the brought-forward date.', 'error'); return; }
+    const others = fpEntries(s.id).filter(x => !info || x.id !== info.e.id).map(x => [x.inv, x.recv].filter(Boolean).sort()[0]).filter(Boolean).sort()[0];
+    if (others && d.date > others) { showNotification(`This ledger has an entry dated ${fpFmtDate(others)}. The opening balance date must be on or before it.`, 'error'); return; }
+    if (!obPinCheck('obp')) return;
+    const now = new Date().toISOString(), desc = 'BALANCE B/F' + (d.ref ? ' - ' + d.ref : '');
+    let e = info ? info.e : null, before = 'nil';
+    if (e) before = (+e.cr > 0 && !(+e.dr > 0) ? 'Advance ' + money(e.cr) : money(e.dr || 0)) + ' as at ' + fpFmtDate(e.inv);
+    else { e = fpNewEntry(s.id); fpData().entries.push(e); }
+    e.inv = d.date; e.recv = ''; e.desc = desc; e.dr = owed ? d.amt : null; e.cr = owed ? null : d.amt; e.due = owed ? (d.due || '') : ''; delete e.status;
+    const prev = info && info.r, hist = prev ? (prev.history || []).slice() : [];
+    hist.push({ at: now, action: prev ? 'corrected' : (info ? 'formalised' : 'posted'), by: d.auth, prep: d.prep, reason: prev ? d.reason : '', change: `${before} → ${owed ? '' : 'Advance '}${money(d.amt)} as at ${fpFmtDate(d.date)}` });
+    obData().suppliers[s.id] = { entryId: e.id, date: d.date, side: d.side, amount: d.amt, due: owed ? (d.due || '') : '', ref: d.ref, preparedBy: d.prep, approvedBy: d.auth, postedAt: (prev && prev.postedAt) || now, history: hist };
+    fpSortLedger(s.id);
+    obpClose(); fpPersist(); fpRenderGrid(); fpRenderTop(); obRenderAudit();
+    showNotification(`Opening balance of ${money(d.amt)} posted and locked for ${s.name}.`);
+    if (confirm('Print the opening balance voucher now?')) obPrintSupVoucher(s.id);
+}
+function obPrintSupVoucher(sid) {
+    const s = fpSupplier(sid), r = obData().suppliers[sid]; if (!s || !r) return;
+    obPrintVoucher('Supplier Opening Balance Voucher (Brought Forward)', `OB-SUP-${r.date}`, [
+        ['Supplier', esc(s.name)], ['Brought forward as at', fpFmtDate(r.date)], ['Balance type', r.side === 'owed' ? 'Balance owed to supplier (payable)' : 'Advance paid to supplier'], ['Amount', money(r.amount)],
+        ['Payment due date', r.due ? fpFmtDate(r.due) : '—'], ['Source document', esc(r.ref || '')], ['Prepared by', esc(r.preparedBy || '')], ['Authorised by', esc(r.approvedBy || '')], ['Posted', esc(obStamp(r.postedAt))]]);
+}
+function obRenderAll() { obRenderStock(); obRenderAudit(); }
+document.addEventListener('DOMContentLoaded', () => { obBuildModals(); obRenderAll(); });
+</script>
 
     <!-- Google Sheets sync (talks to the Apps Script in app_script.txt) -->
     <div id="sheetsPill" onclick="switchTab('settings')" class="no-print fixed bottom-10 left-3 z-40 cursor-pointer select-none px-3 py-1.5 rounded-full text-[11px] font-semibold bg-slate-800/90 border border-slate-700 text-slate-300 shadow-lg hidden"></div>
