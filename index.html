@@ -1533,7 +1533,7 @@
 
                     <div class="max-w-3xl mx-auto bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl space-y-4">
                         <div>
-                            <h3 class="font-bold text-white text-lg"><i class="fa-brands fa-google-drive text-emerald-400 mr-2"></i>Google Sheets connection</h3>
+                            <h3 class="font-bold text-white text-lg"><i class="fa-brands fa-google-drive text-emerald-400 mr-2"></i>Database connection</h3>
                         </div>
                         <div class="space-y-3">
                             <input id="sheetsUrl" type="url" placeholder="https://script.google.com/macros/s/.../exec" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-sky-500">
@@ -1542,12 +1542,12 @@
                         <div class="flex flex-wrap gap-2">
                             <button type="button" id="sheetsConnectBtn" onclick="Sheets.connect()" class="px-4 py-2 text-xs font-semibold bg-sky-600 hover:bg-sky-500 text-white rounded-lg"><i class="fa-solid fa-plug mr-1"></i> Connect &amp; sync</button>
                             <button type="button" onclick="Sheets.syncNow()" class="px-4 py-2 text-xs font-semibold bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-lg border border-slate-700"><i class="fa-solid fa-rotate mr-1"></i> Sync now</button>
-                            <button type="button" onclick="Sheets.uploadLocal()" class="px-4 py-2 text-xs font-semibold bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-lg border border-slate-700"><i class="fa-solid fa-cloud-arrow-up mr-1"></i> Overwrite sheet with this browser's data</button>
+                            <button type="button" onclick="Sheets.uploadLocal()" class="px-4 py-2 text-xs font-semibold bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-lg border border-slate-700"><i class="fa-solid fa-cloud-arrow-up mr-1"></i> Overwrite database with this browser's data</button>
                             <button type="button" id="sheetsDisconnectBtn" onclick="Sheets.disconnect()" class="px-4 py-2 text-xs font-semibold bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-lg border border-slate-700">Disconnect</button>
                             <button type="button" id="sheetsBakeBtn" onclick="Sheets.bake()" class="hidden px-4 py-2 text-xs font-semibold bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg"><i class="fa-solid fa-download mr-1"></i> Download app with this URL built in</button>
                         </div>
                         <p id="sheetsStatusText" class="text-xs text-slate-400">Not connected.</p>
-                        <p id="sheetsBuiltInNote" class="hidden text-xs text-emerald-400"><i class="fa-solid fa-lock mr-1"></i> The Google Sheets link is built into this app. Everyone who opens the app connects and syncs automatically when it launches &ndash; there is nothing to enter or press.</p>
+                        <p id="sheetsBuiltInNote" class="hidden text-xs text-emerald-400"><i class="fa-solid fa-lock mr-1"></i> The Database link is built into this app. Everyone who opens the app connects and syncs automatically when it launches &ndash; there is nothing to enter or press.</p>
                         <p id="sheetsBakeHelp" class="hidden text-[11px] text-slate-500">Right now the link is saved only in this browser. To make <b>every</b> device that opens the app's web address connect by itself, click the green button, then upload the downloaded <b>index.html</b> to where the app is hosted (replace the old one). Anyone with the app's address will then be able to read and change the sheet's data.</p>
                         <p id="sheetsGenericHelp" class="text-[11px] text-slate-500">The URL is saved in this browser and re-used after every refresh. Records added, edited or deleted here or directly in the Google Sheet are kept in step both ways; changes made in the sheet show up here within about 20 seconds.</p>
                     </div>
@@ -6475,9 +6475,9 @@
             const pill = document.getElementById('sheetsPill'), txt = document.getElementById('sheetsStatusText');
             const map = {
                 off:    ['', 'Not connected. Data is stored in this browser only.'],
-                ok:     ['<i class="fa-solid fa-circle text-emerald-400 mr-1"></i> Synced to Database', 'Connected. Changes made here or in the Google Sheet are kept in step both ways.'],
+                ok:     ['<i class="fa-solid fa-circle text-emerald-400 mr-1"></i> Synced to Database', 'Connected. Changes made here or in the Database are kept in step both ways.'],
                 saving: ['<i class="fa-solid fa-spinner fa-spin text-sky-400 mr-1"></i> Syncing with Database…', 'Syncing…'],
-                error:  ['<i class="fa-solid fa-triangle-exclamation text-amber-400 mr-1"></i> Not synced – will retry', 'Could not reach Google Sheets: ' + (detail || 'unknown error') + '. Your data is safe in this browser and will be sent when the connection works.']
+                error:  ['<i class="fa-solid fa-triangle-exclamation text-amber-400 mr-1"></i> Not synced – will retry', 'Could not reach Database: ' + (detail || 'unknown error') + '. Your data is safe in this browser and will be sent when the connection works.']
             };
             const m = map[kind] || map.off;
             if (pill) { pill.innerHTML = m[0]; pill.classList.toggle('hidden', !m[0]); }
