@@ -7386,12 +7386,122 @@ document.addEventListener('DOMContentLoaded', () => { obBuildModals(); obRenderA
         // iOS has no install event, so show its hint (once per visit) when opened in the browser
         if (isIOS()) setTimeout(() => refresh(true), 2500); else refresh(false);
 
-        // service worker (needed for offline use; installation itself needs https)
-        if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost')) {
-            window.addEventListener('load', () => { navigator.serviceWorker.register('sw.js').catch(() => {}); });
+        return { install, dismiss, open };
+    })();
+    </script>
+
+    <script>
+    /* Automatic updates.
+       Whenever a new index.html is uploaded to the host, every device that has the app (installed or in a browser)
+       notices within a few minutes - or the moment the app is opened or brought back to the front - and reloads
+       itself onto the new version. No version number has to be changed by hand.
+       Safety: it never reloads while Google Sheets changes are still waiting to be sent or while someone is typing
+       in a field; it waits and tries again. Saved data (this device + Google Sheets) is not touched by an update. */
+    const AppUpdate = (function () {
+        const CHECK_EVERY = 5 * 60 * 1000;      // while the app is open
+        const MIN_GAP = 30 * 1000;              // never probe more often than this
+        const COUNTDOWN = 6;                    // seconds of notice when the app is on screen
+        const APPLIED_KEY = 'tankiq_update_applied';
+        const secure = location.protocol === 'https:' || location.hostname === 'localhost';
+        const pageUrl = new URL('./', location.href).href;   // same key the service worker stores the page under (the app's folder address)
+        let reg = null, lastCheck = 0, checking = false, pendingHash = null, countdownTimer = null;
+
+        async function hashText(t) {
+            try {
+                const b = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(t));
+                return Array.from(new Uint8Array(b)).map(x => x.toString(16).padStart(2, '0')).join('');
+            } catch (e) { let h = 5381; for (let i = 0; i < t.length; i++) h = ((h << 5) + h + t.charCodeAt(i)) | 0; return h + ':' + t.length; }
+        }
+        // fingerprint of the copy this device is running right now (the one the service worker served to this window)
+        async function runningHash() {
+            try {
+                const c = await caches.open('tankiq-v1');
+                const r = await c.match(pageUrl);
+                if (r) return await hashText(await r.text());
+            } catch (e) {}
+            return null;
+        }
+        async function latestHash() {
+            const r = await fetch(pageUrl + 'index.html?_chk=' + Date.now(), { cache: 'no-store' });
+            if (!r.ok) throw new Error('HTTP ' + r.status);
+            return hashText(await r.text());
         }
 
-        return { install, dismiss, open };
+        function busy() {
+            try { if (localStorage.getItem('fms_sheets_dirty') === '1') return true; } catch (e) {}   // Sheets changes not yet sent
+            const a = document.activeElement;
+            if (a && (/^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName) || a.isContentEditable) && !document.hidden) return true;   // someone is typing
+            return false;
+        }
+
+        function toast(msg) {
+            let el = document.getElementById('appUpdateToast');
+            if (!el) {
+                el = document.createElement('div');
+                el.id = 'appUpdateToast';
+                el.className = 'no-print';
+                el.setAttribute('role', 'status');
+                el.style.cssText = 'position:fixed;left:50%;bottom:calc(16px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);z-index:99999;max-width:calc(100vw - 24px);background:#0f172a;color:#e2e8f0;border:1px solid #334155;border-radius:12px;padding:10px 16px;font:600 13px system-ui,sans-serif;box-shadow:0 10px 30px rgba(0,0,0,.45)';
+                document.body.appendChild(el);
+            }
+            el.textContent = msg;
+        }
+
+        function applyNow() {
+            try { sessionStorage.setItem(APPLIED_KEY, pendingHash); } catch (e) {}
+            location.reload();
+        }
+
+        // wait for a safe moment, then reload
+        function schedule() {
+            if (!pendingHash || countdownTimer) return;
+            const tick = () => {
+                countdownTimer = null;
+                if (!pendingHash) return;
+                if (busy()) { countdownTimer = setTimeout(tick, 5000); return; }          // not now - try again shortly
+                if (document.hidden) { applyNow(); return; }                                 // app in the background: switch silently
+                let n = COUNTDOWN;
+                const step = () => {
+                    if (busy()) { toast('Update ready - will install when you finish.'); countdownTimer = setTimeout(tick, 5000); return; }
+                    if (n <= 0) { toast('Updating Tank IQ\u2026'); setTimeout(applyNow, 300); return; }
+                    toast('A new version of Tank IQ is ready - updating in ' + n + 's');
+                    n--; countdownTimer = setTimeout(step, 1000);
+                };
+                step();
+            };
+            tick();
+        }
+
+        async function check(force) {
+            if (!secure || checking || !navigator.onLine) return;
+            if (!force && Date.now() - lastCheck < MIN_GAP) return;
+            checking = true; lastCheck = Date.now();
+            try {
+                if (reg) reg.update().catch(() => {});                                      // also look for a new sw.js
+                const [latest, running] = await Promise.all([latestHash(), runningHash()]);
+                if (!running) { try { sessionStorage.setItem('tankiq_base', latest); } catch (e) {} }
+                let base = running;
+                if (!base) { try { base = sessionStorage.getItem('tankiq_base'); } catch (e) {} }
+                if (base && latest !== base) {
+                    let applied = null; try { applied = sessionStorage.getItem(APPLIED_KEY); } catch (e) {}
+                    if (applied !== latest) { pendingHash = latest; schedule(); }           // a given version is applied once per session: no reload loops
+                }
+            } catch (e) { /* offline or host unreachable: try again later */ }
+            checking = false;
+        }
+
+        if (secure && 'serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('sw.js', { updateViaCache: 'none' })
+                    .then(r => { reg = r; }).catch(() => {});
+                setTimeout(() => check(true), 4000);
+            });
+            setInterval(() => { if (!document.hidden) check(false); }, CHECK_EVERY);
+            document.addEventListener('visibilitychange', () => { if (!document.hidden) check(false); else if (pendingHash) schedule(); });
+            window.addEventListener('focus', () => check(false));
+            window.addEventListener('online', () => check(true));
+        }
+        return { check: () => check(true) };
     })();
     </script>
 </body>
