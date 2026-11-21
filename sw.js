@@ -1,7 +1,8 @@
 /* Tank IQ service worker.
    - App page: network first (so every update you upload shows straight away), cached copy when offline.
    - Library files (Tailwind, Font Awesome, Chart.js, SheetJS, Google Fonts): cached after first load.
-   - Google Sheets sync and anything else: never touched, always goes straight to the network. */
+   - Google Sheets sync and anything else: never touched, always goes straight to the network.
+   - Update checks from the app (?_chk=...) always go straight to the network, so the app can compare versions. */
 const CACHE = 'tankiq-v1';
 const SHELL = ['./', 'manifest.json', 'icon-192.png', 'icon-512.png', 'icon-maskable-512.png'];
 const LIB_HOSTS = [
@@ -41,10 +42,13 @@ self.addEventListener('fetch', e => {
   if (req.method !== 'GET') return;
   const url = new URL(req.url);
 
+  // The app's own "is there an update?" probe: never answered from cache
+  if (url.searchParams.has('_chk')) return;
+
   // The app page itself
   if (req.mode === 'navigate') {
     e.respondWith(
-      fetch(req)
+      fetch(req.url, { cache: 'no-store' })   // skip the browser's HTTP cache so a new upload is seen at once
         .then(res => keep(new Request('./'), res))
         .catch(() => caches.match('./', { ignoreSearch: true }).then(r => r || caches.match('index.html', { ignoreSearch: true })))
     );
