@@ -1009,9 +1009,31 @@
                                 </h3>
                                 <div class="flex flex-wrap gap-1.5">
                                     <button type="button" id="btnOpenIssue" onclick="toggleIssueForm(true)" class="px-3 py-1.5 text-xs font-semibold bg-sky-600 hover:bg-sky-500 text-white rounded-lg shadow-lg shadow-sky-600/20"><i class="fa-solid fa-plus mr-1"></i> Dispense Fuel</button>
+                                    <button type="button" onclick="openAuditTrail()" class="px-3 py-1.5 text-xs font-semibold bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-lg border border-slate-700"><i class="fa-solid fa-clipboard-list mr-1"></i> Audit trail</button>
                                     <button type="button" onclick="exportIssueHistoryCsv()" class="px-3 py-1.5 text-xs font-semibold bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-lg border border-slate-700"><i class="fa-solid fa-file-csv mr-1"></i> Export CSV</button>
                                     <button type="button" onclick="openClearIssued()" class="px-3 py-1.5 text-xs font-semibold bg-rose-600/15 hover:bg-rose-600/30 text-rose-300 rounded-lg border border-rose-500/30"><i class="fa-solid fa-trash-can mr-1"></i> Clear dispensing records</button>
                                 </div>
+                            </div>
+                            <!-- Search / filter bar for the dispensing log -->
+                            <div class="flex flex-wrap items-end gap-2 mb-4 p-3 bg-slate-950/60 border border-slate-800 rounded-xl">
+                                <div class="flex-1 min-w-[180px]">
+                                    <label for="issSearchAsset" class="block text-[10px] font-semibold text-slate-400 uppercase tracking-wider mb-1">Asset number</label>
+                                    <div class="relative">
+                                        <i class="fa-solid fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 text-xs"></i>
+                                        <input type="text" id="issSearchAsset" oninput="renderIssueHistory()" placeholder="e.g. GN 9199-22 or GEN-03" autocomplete="off" class="w-full bg-slate-950 border border-slate-700 rounded-lg pl-8 pr-3 py-2 text-sm text-slate-100 focus:outline-none focus:border-sky-500">
+                                    </div>
+                                </div>
+                                <div>
+                                    <label for="issSearchFrom" class="block text-[10px] font-semibold text-slate-400 uppercase tracking-wider mb-1">From date</label>
+                                    <input type="date" id="issSearchFrom" onchange="renderIssueHistory()" class="bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-100 focus:outline-none focus:border-sky-500">
+                                </div>
+                                <div>
+                                    <label for="issSearchTo" class="block text-[10px] font-semibold text-slate-400 uppercase tracking-wider mb-1">To date</label>
+                                    <input type="date" id="issSearchTo" onchange="renderIssueHistory()" class="bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-100 focus:outline-none focus:border-sky-500">
+                                </div>
+                                <button type="button" onclick="clearIssueSearch()" class="px-3 py-2 text-xs font-semibold bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-lg border border-slate-700"><i class="fa-solid fa-xmark mr-1"></i> Clear</button>
+                                <div id="issSearchCount" class="w-full text-[11px] text-slate-500"></div>
+                                <div class="w-full text-[11px] text-slate-500"><i class="fa-solid fa-pen-to-square mr-1"></i>Click a record to edit it. The Edit Records PIN is required and every change is saved in the audit trail.</div>
                             </div>
                             <div class="overflow-x-auto custom-scrollbar flex-1">
                                 <table class="w-full text-left text-sm text-slate-300">
@@ -1026,6 +1048,7 @@
                                             <th class="py-3 px-3 text-right">Amount (GH₵)</th>
                                             <th class="py-3 px-3">Odometer</th>
                                             <th class="py-3 px-3">Driver / Operator</th>
+                                            <th class="py-3 px-2 w-8"><span class="sr-only">Edit</span></th>
                                         </tr>
                                     </thead>
                                     <tbody id="issueHistoryTable" class="divide-y divide-slate-800">
@@ -1541,6 +1564,23 @@
                         </div>
                     </div>
 
+                    <div id="editPinCard" class="max-w-3xl mx-auto bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl space-y-4">
+                        <div>
+                            <h3 class="font-bold text-white text-lg"><i class="fa-solid fa-pen-to-square text-sky-400 mr-2"></i>Edit Records PIN</h3>
+                            <p class="text-xs text-slate-400 mt-1">Asked before a record in the Fuel Dispensing Log can be edited. Every edit is kept in the audit trail (who, when, why, old and new values).</p>
+                            <p class="text-xs mt-1"><span id="editPinStatus" class="font-semibold"></span></p>
+                        </div>
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+                            <div id="editPinCurWrap" class="hidden"><label class="block text-xs text-slate-400 mb-1">Current PIN</label><input type="password" id="editPinCur" inputmode="numeric" maxlength="8" autocomplete="off" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-sm text-slate-100 focus:outline-none focus:border-sky-500"></div>
+                            <div><label class="block text-xs text-slate-400 mb-1">New PIN (4–8 digits)</label><input type="password" id="editPinNew" inputmode="numeric" maxlength="8" autocomplete="off" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-sm text-slate-100 focus:outline-none focus:border-sky-500"></div>
+                            <div><label class="block text-xs text-slate-400 mb-1">Repeat new PIN</label><input type="password" id="editPinNew2" inputmode="numeric" maxlength="8" autocomplete="off" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-sm text-slate-100 focus:outline-none focus:border-sky-500"></div>
+                        </div>
+                        <div class="flex flex-wrap gap-2 justify-end">
+                            <button type="button" id="editPinRemoveBtn" onclick="removeEditPin()" class="hidden px-4 py-2 text-xs font-semibold bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-lg border border-slate-700">Remove PIN</button>
+                            <button type="button" onclick="saveEditPin()" class="px-4 py-2 text-xs font-semibold bg-sky-600 hover:bg-sky-500 text-white rounded-lg">Save PIN</button>
+                        </div>
+                    </div>
+
                     <div id="tlCard" class="max-w-3xl mx-auto bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl space-y-4">
                         <div>
                             <h3 class="font-bold text-white text-lg"><i class="fa-solid fa-lock text-amber-400 mr-2"></i>Tab Lock (Access PIN)</h3>
@@ -1858,6 +1898,100 @@
                 <button type="button" onclick="closeIssueConfirm()" class="px-4 py-2.5 text-sm font-semibold bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-xl border border-slate-700"><i class="fa-solid fa-pen mr-1.5"></i> Go back &amp; edit</button>
                 <button type="button" id="issueConfirmBtn" onclick="confirmIssue()" class="px-4 py-2.5 text-sm font-semibold bg-sky-600 hover:bg-sky-500 text-white rounded-xl shadow-lg shadow-sky-600/20"><i class="fa-solid fa-gas-pump mr-1.5"></i> Confirm &amp; Issue Fuel</button>
             </div>
+        </div>
+    </div>
+
+    <!-- MODAL: Edit PIN prompt (dispensing record edit) -->
+    <div id="eiPinModal" class="hidden fixed inset-0 z-[66] bg-slate-950/85 backdrop-blur-sm flex items-center justify-center p-4 no-print">
+        <div class="bg-slate-900 border border-slate-700 rounded-2xl shadow-2xl w-full max-w-sm p-6 space-y-4">
+            <div class="text-center">
+                <div class="mx-auto h-12 w-12 rounded-full bg-amber-500/10 border border-amber-500/30 flex items-center justify-center mb-3"><i class="fa-solid fa-lock text-amber-400 text-lg"></i></div>
+                <h3 class="font-bold text-white text-lg">Edit PIN required</h3>
+                <p class="text-xs text-slate-400 mt-1">Enter the Edit Records PIN to edit this dispensing record.</p>
+                <p id="eiPinInfo" class="text-[11px] text-sky-300 mt-2 font-mono"></p>
+            </div>
+            <div>
+                <input type="password" id="eiPinInput" inputmode="numeric" maxlength="8" autocomplete="off" placeholder="Edit PIN" onkeydown="if(event.key==='Enter'){event.preventDefault();eiPinSubmit();}" class="w-full text-center tracking-widest bg-slate-950 border border-slate-700 rounded-xl px-3 py-2.5 text-lg text-slate-100 focus:outline-none focus:border-sky-500">
+                <p id="eiPinErr" class="hidden text-[11px] text-rose-400 mt-1 text-center"></p>
+            </div>
+            <div class="flex justify-end gap-2">
+                <button type="button" onclick="eiPinCancel()" class="px-4 py-2 text-sm bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-xl border border-slate-700">Cancel</button>
+                <button type="button" onclick="eiPinSubmit()" class="px-5 py-2 text-sm font-semibold bg-sky-600 hover:bg-sky-500 text-white rounded-xl">Unlock</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL: Edit dispensing record -->
+    <div id="editIssueModal" class="hidden fixed inset-0 z-[65] bg-slate-950/85 backdrop-blur-sm flex items-center justify-center p-4 no-print">
+        <div class="bg-slate-900 border border-slate-700 rounded-2xl shadow-2xl w-full max-w-2xl max-h-[92vh] overflow-y-auto custom-scrollbar">
+            <div class="p-5 border-b border-slate-800 flex items-start justify-between gap-3">
+                <div>
+                    <h3 class="font-bold text-white text-lg"><i class="fa-solid fa-pen-to-square text-sky-400 mr-2"></i>Edit Dispensing Record <span id="eiTitleRef" class="font-mono text-sm text-slate-400 ml-1"></span></h3>
+                    <p class="text-xs text-slate-400 mt-1">Stock is corrected automatically. The old and new values, your name and the reason are saved in the audit trail.</p>
+                </div>
+                <button type="button" onclick="eiClose()" class="text-slate-400 hover:text-white" title="Close"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+
+            <div id="eiFormStage" class="p-5 space-y-4">
+                <div id="eiMeta" class="flex flex-wrap gap-1.5 text-[10px] font-semibold"></div>
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div><label class="block text-xs font-semibold text-slate-300 mb-1">Date &amp; time <span class="text-rose-400">*</span></label><input type="datetime-local" id="eiDate" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-sm text-slate-100 focus:outline-none focus:border-sky-500"></div>
+                    <div><label id="eiLblTruck" class="block text-xs font-semibold text-slate-300 mb-1">Vehicle / Truck</label><select id="eiTruck" onchange="eiOnTruck()" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-sm text-slate-100 focus:outline-none focus:border-sky-500"></select></div>
+                    <div id="eiDestWrap" class="sm:col-span-2"><label class="block text-xs font-semibold text-slate-300 mb-1">Route / destination <span class="text-rose-400">*</span> <span class="text-slate-500 font-normal">(separate several stops with &rarr;)</span></label><input type="text" id="eiDest" list="issStopList" maxlength="200" autocomplete="off" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-sm text-slate-100 focus:outline-none focus:border-sky-500"></div>
+                    <div><label class="block text-xs font-semibold text-slate-300 mb-1">Product type</label>
+                        <select id="eiProduct" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-sm text-slate-100 focus:outline-none focus:border-sky-500"><option value="White Product">White Product</option><option value="Lube">Lube</option><option value="Gas">Gas</option><option value="Others">Others</option><option value="N/A">N/A</option></select></div>
+                    <div><label class="block text-xs font-semibold text-slate-300 mb-1">Fuel type <span class="text-slate-500 font-normal">(follows the asset)</span></label><input type="text" id="eiFuel" readonly class="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-sm text-slate-400 font-semibold cursor-not-allowed"></div>
+                    <div><label class="block text-xs font-semibold text-slate-300 mb-1">Quantity (L) <span class="text-rose-400">*</span></label><input type="number" id="eiQty" min="0.001" step="any" oninput="eiUpdateAmount()" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-sm text-slate-100 focus:outline-none focus:border-sky-500"></div>
+                    <div><label class="block text-xs font-semibold text-slate-300 mb-1">Rate (GH₵/L)</label><input type="number" id="eiRate" min="0.0001" step="0.0001" oninput="eiUpdateAmount()" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-sm text-slate-100 focus:outline-none focus:border-sky-500"></div>
+                    <div><label class="block text-xs font-semibold text-slate-300 mb-1">Amount (GH₵)</label><input type="text" id="eiAmt" readonly class="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-sm text-slate-400 font-semibold cursor-not-allowed"></div>
+                    <div><label id="eiLblMeter" class="block text-xs font-semibold text-slate-300 mb-1">Odometer <span class="text-rose-400">*</span></label><input type="number" id="eiMeter" step="any" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-sm text-slate-100 focus:outline-none focus:border-sky-500"></div>
+                    <div><label id="eiLblDriver" class="block text-xs font-semibold text-slate-300 mb-1">Driver <span class="text-rose-400">*</span></label><input type="text" id="eiDriver" maxlength="80" autocomplete="off" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-sm text-slate-100 focus:outline-none focus:border-sky-500"></div>
+                    <div><label id="eiLblDisp" class="block text-xs font-semibold text-slate-300 mb-1">Dispenser operator <span class="text-rose-400">*</span></label><input type="text" id="eiDispenser" maxlength="80" autocomplete="off" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-sm text-slate-100 focus:outline-none focus:border-sky-500"></div>
+                    <div class="sm:col-span-2"><label class="block text-xs font-semibold text-slate-300 mb-1">Remarks / job ref <span class="text-slate-500 font-normal">(optional)</span></label><input type="text" id="eiRemarks" maxlength="200" autocomplete="off" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-sm text-slate-100 focus:outline-none focus:border-sky-500"></div>
+                </div>
+                <div class="p-3 rounded-xl bg-amber-500/5 border border-amber-500/30 space-y-3">
+                    <p class="text-[11px] font-semibold text-amber-300"><i class="fa-solid fa-clipboard-list mr-1"></i>Audit trail entry (compulsory)</p>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <div><label class="block text-xs font-semibold text-slate-300 mb-1">Edited by (your name) <span class="text-rose-400">*</span></label><input type="text" id="eiBy" maxlength="60" autocomplete="off" placeholder="e.g. Kwame Asare" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-sm text-slate-100 focus:outline-none focus:border-sky-500"></div>
+                        <div><label class="block text-xs font-semibold text-slate-300 mb-1">Reason for the edit <span class="text-rose-400">*</span></label><input type="text" id="eiReason" maxlength="200" autocomplete="off" placeholder="e.g. Quantity was keyed wrongly" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-sm text-slate-100 focus:outline-none focus:border-sky-500"></div>
+                    </div>
+                </div>
+                <p id="eiErr" class="hidden text-xs text-rose-400 font-semibold"></p>
+                <div class="flex flex-wrap justify-end gap-2">
+                    <button type="button" onclick="eiClose()" class="px-4 py-2.5 text-sm font-semibold bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-xl border border-slate-700">Cancel</button>
+                    <button type="button" onclick="eiReview()" class="px-4 py-2.5 text-sm font-semibold bg-sky-600 hover:bg-sky-500 text-white rounded-xl shadow-lg shadow-sky-600/20"><i class="fa-solid fa-clipboard-check mr-1.5"></i> Review changes</button>
+                </div>
+            </div>
+
+            <div id="eiReviewStage" class="hidden p-5 space-y-4">
+                <div id="eiReviewBody"></div>
+                <div class="flex flex-wrap justify-end gap-2">
+                    <button type="button" onclick="eiBack()" class="px-4 py-2.5 text-sm font-semibold bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-xl border border-slate-700"><i class="fa-solid fa-pen mr-1.5"></i> Go back &amp; edit</button>
+                    <button type="button" onclick="eiConfirm()" class="px-4 py-2.5 text-sm font-semibold bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl shadow-lg shadow-emerald-600/20"><i class="fa-solid fa-check mr-1.5"></i> Confirm &amp; Save</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL: Audit trail -->
+    <div id="auditModal" class="hidden fixed inset-0 z-[65] bg-slate-950/85 backdrop-blur-sm flex items-center justify-center p-4 no-print">
+        <div class="bg-slate-900 border border-slate-700 rounded-2xl shadow-2xl w-full max-w-3xl max-h-[92vh] flex flex-col">
+            <div class="p-5 border-b border-slate-800 flex items-start justify-between gap-3">
+                <div>
+                    <h3 class="font-bold text-white text-lg"><i class="fa-solid fa-clipboard-list text-sky-400 mr-2"></i>Audit Trail</h3>
+                    <p class="text-xs text-slate-400 mt-1">Every edit to a dispensing record and every change to the Edit PIN. Entries cannot be edited or deleted in the app.</p>
+                </div>
+                <button type="button" onclick="closeAuditTrail()" class="text-slate-400 hover:text-white" title="Close"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <div class="p-4 border-b border-slate-800 flex flex-wrap items-center gap-2">
+                <div class="relative flex-1 min-w-[180px]">
+                    <i class="fa-solid fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 text-xs"></i>
+                    <input type="text" id="auditFilter" oninput="renderAuditTrail()" placeholder="Search ref, asset, name, reason..." autocomplete="off" class="w-full bg-slate-950 border border-slate-700 rounded-lg pl-8 pr-3 py-2 text-sm text-slate-100 focus:outline-none focus:border-sky-500">
+                </div>
+                <button type="button" onclick="exportAuditCsv()" class="px-3 py-2 text-xs font-semibold bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-lg border border-slate-700"><i class="fa-solid fa-file-csv mr-1"></i> Export CSV</button>
+                <div id="auditCount" class="w-full text-[11px] text-slate-500"></div>
+            </div>
+            <div id="auditListBox" class="p-4 space-y-2 overflow-y-auto custom-scrollbar flex-1"></div>
         </div>
     </div>
 
@@ -2297,6 +2431,7 @@
                 cardNumbers: {},   // permanent card number per base (set once)
                 cardRates: {},     // current fuel rate per base and fuel (GH₵/L), separate from the main tank price
                 settings: { approvalPinHash: '' },
+                auditLogs: [],   // audit trail (edits to dispensing records, PIN events). Append-only in the app.
                 trucks: [],
                 destinations: [],
                 fuelPurchases: { suppliers: [], entries: [] },   // supplier accounts (credit terms) + purchase ledger
@@ -2464,8 +2599,13 @@
             }
             if (!confirm('This permanently deletes ALL vehicles, routes, deliveries, dispensing records and supplier purchase ledgers, and resets stock to zero. Continue?')) return;
             const keepPin = (appState.settings && appState.settings.clearPinHash) || '';
+            const keepEditPin = (appState.settings && appState.settings.editPinHash) || '';
+            const keepAudit = auditList().slice();
             appState = emptyState();
             if (keepPin) appState.settings = { ...(appState.settings || {}), clearPinHash: keepPin };   // the PIN survives a clear
+            if (keepEditPin) appState.settings = { ...(appState.settings || {}), editPinHash: keepEditPin };
+            appState.auditLogs = keepAudit;   // the audit trail is never wiped by a data clear
+            auditAdd({ module: 'Security', action: 'All data cleared' });
             clrClearInputs();
             saveState();
             renderClearPinStatus();
@@ -3174,8 +3314,12 @@
                     const d = JSON.parse(r.result);
                     if (!d || !d.tanks || !Array.isArray(d.receiveLogs) || !Array.isArray(d.issueLogs)) throw new Error('bad');
                     if (!confirm(`Restore this backup? It replaces ALL current data (${d.receiveLogs.length} deliveries, ${d.issueLogs.length} issuing records).`)) return;
+                    const _prevAudit = auditList().slice();
                     const base = emptyState();
                     appState = { ...base, ...d, tanks: { Diesel: { ...base.tanks.Diesel, ...d.tanks.Diesel }, Petrol: { ...base.tanks.Petrol, ...d.tanks.Petrol } } };
+                    { const _have = new Set((appState.auditLogs || []).map(a => a.id));
+                      appState.auditLogs = (appState.auditLogs || []).concat(_prevAudit.filter(a => !_have.has(a.id)));   // audit entries are never lost on restore
+                      auditAdd({ module: 'Security', action: 'Backup restored' }); }
                     saveState();
                     showNotification('Backup restored.');
                 } catch (e) { showNotification('That file is not a valid Tank IQ backup.', 'error'); }
@@ -3660,12 +3804,36 @@
             pendingIssueCommit = null; closeIssueConfirm(); run();
         }
 
+        // --- Dispensing log search (asset number and/or date range) ---
+        function issueLogDay(l) {
+            try { const d = ghParse(l.date); if (!isNaN(d)) return ghDateStr(d); } catch (e) {}
+            return String(l.date || '').slice(0, 10);
+        }
+        function clearIssueSearch() {
+            ['issSearchAsset', 'issSearchFrom', 'issSearchTo'].forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
+            renderIssueHistory();
+        }
         function renderIssueHistory() {
             const tbody = document.getElementById('issueHistoryTable');
-            const byDate = [...appState.issueLogs].sort((a, b) => String(b.date).localeCompare(String(a.date)));   // back-dated entries sit at their real date
+            const qEl = document.getElementById('issSearchAsset'), fEl = document.getElementById('issSearchFrom'), tEl = document.getElementById('issSearchTo');
+            const q = qEl ? normId(qEl.value) : '';
+            let from = fEl ? fEl.value : '', to = tEl ? tEl.value : '';
+            if (from && to && from > to) { const t = from; from = to; to = t; }   // tolerate swapped dates
+            const filtering = !!(q || from || to);
+            const all = appState.issueLogs;
+            const byDate = all
+                .filter(l => !q || normId(l.truckId).includes(q))
+                .filter(l => { if (!from && !to) return true; const d = issueLogDay(l); return (!from || d >= from) && (!to || d <= to); })
+                .sort((a, b) => String(b.date).localeCompare(String(a.date)));   // back-dated entries sit at their real date
+            const cnt = document.getElementById('issSearchCount');
+            if (cnt) cnt.textContent = filtering ? `Showing ${byDate.length} of ${all.length} record(s)` : '';
+            if (filtering && !byDate.length) {
+                tbody.innerHTML = '<tr><td colspan="10" class="py-8 px-3 text-center text-sm text-slate-500"><i class="fa-solid fa-magnifying-glass mr-2"></i>No dispensing records match your search.</td></tr>';
+                return;
+            }
             tbody.innerHTML = byDate.map(l => `
-                <tr class="hover:bg-slate-800/40 transition">
-                    <td class="py-3 px-3 text-xs text-slate-300 font-medium">${formatDate(l.date)}${l.manualDate ? '<div class="text-[9px] font-semibold text-amber-300 mt-0.5">MANUAL DATE</div>' : ''}</td>
+                <tr data-idx="${appState.issueLogs.indexOf(l)}" tabindex="0" onclick="editIssueStart(this.dataset.idx)" onkeydown="if(event.key==='Enter'){editIssueStart(this.dataset.idx)}" title="Click to edit this record (PIN required)" class="hover:bg-slate-800/40 transition cursor-pointer">
+                    <td class="py-3 px-3 text-xs text-slate-300 font-medium">${formatDate(l.date)}${l.manualDate ? '<div class="text-[9px] font-semibold text-amber-300 mt-0.5">MANUAL DATE</div>' : ''}${issueEditedBadge(l)}</td>
                     <td class="py-3 px-3 font-semibold text-white">${esc(l.truckId)}${issueBadges(l)}</td>
                     <td class="py-3 px-3 text-slate-300">${esc(l.destination)}${l.remarks ? `<div class="text-[10px] text-slate-500">${esc(l.remarks)}</div>` : ''}${manualDateNote(l)}</td>
                     <td class="py-3 px-3">
@@ -3676,8 +3844,376 @@
                     <td class="py-3 px-3 text-right text-xs font-bold text-amber-300">${issueRate(l) === null ? '—' : fmt(issueAmount(l), 2)}</td>
                     <td class="py-3 px-3 font-mono text-xs text-slate-400">${meterText(l)}</td>
                     <td class="py-3 px-3 text-xs text-slate-300">${esc(l.driver)}</td>
+                    <td class="py-3 px-2 text-slate-500"><i class="fa-solid fa-pen-to-square"></i></td>
                 </tr>
             `).join('');
+        }
+
+        /* =====================================================================
+           EDIT DISPENSING RECORDS  -  Edit PIN (Settings) + audit trail
+           Click a record in the Fuel Dispensing Log -> Edit PIN -> edit form -> review -> save.
+           Stock / card balance is corrected automatically and every edit is written to appState.auditLogs
+           (synced to the "Audit Trail" tab of the Google Sheet).
+           ===================================================================== */
+        function editPinIsSet() { return !!(appState.settings && appState.settings.editPinHash); }
+        function editPinMatches(p) { return editPinIsSet() && pinHash(String(p)) === appState.settings.editPinHash; }
+        function auditList() { if (!Array.isArray(appState.auditLogs)) appState.auditLogs = []; return appState.auditLogs; }
+        function auditAdd(entry) {
+            const e = Object.assign({
+                id: 'AUD-' + Date.now().toString(36).toUpperCase() + Math.random().toString(36).slice(2, 5).toUpperCase(),
+                at: nowLocalIso(), module: 'Fuel Dispensing', action: '', recordId: '', asset: '', source: '', by: '', reason: '', changes: '', before: '', after: ''
+            }, entry);
+            auditList().push(e);
+            return e;
+        }
+
+        // ---- Edit Records PIN (Settings > Thresholds & Config) ----
+        function renderEditPinStatus() {
+            const st = document.getElementById('editPinStatus'); if (!st) return;
+            const set = editPinIsSet();
+            st.textContent = set ? 'PIN is active. It is asked before any dispensing record can be edited.' : 'No PIN set. Dispensing records cannot be edited until a PIN is set.';
+            st.className = 'font-semibold ' + (set ? 'text-emerald-400' : 'text-amber-400');
+            document.getElementById('editPinCurWrap').classList.toggle('hidden', !set);
+            document.getElementById('editPinRemoveBtn').classList.toggle('hidden', !set);
+        }
+        function editPinClearInputs() { ['editPinCur', 'editPinNew', 'editPinNew2'].forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; }); }
+        function saveEditPin() {
+            const n1 = document.getElementById('editPinNew').value, n2 = document.getElementById('editPinNew2').value;
+            const was = editPinIsSet();
+            if (was && !editPinMatches(document.getElementById('editPinCur').value)) { showNotification('Current PIN is incorrect.', 'error'); return; }
+            if (!/^\d{4,8}$/.test(n1)) { showNotification('PIN must be 4 to 8 digits.', 'error'); return; }
+            if (n1 !== n2) { showNotification('The two PINs do not match.', 'error'); return; }
+            appState.settings = { ...(appState.settings || {}), editPinHash: pinHash(n1) };
+            auditAdd({ module: 'Security', action: was ? 'Edit PIN changed' : 'Edit PIN set' });
+            editPinClearInputs();
+            saveState();
+            showNotification('Edit Records PIN saved.');
+        }
+        function removeEditPin() {
+            if (!editPinMatches(document.getElementById('editPinCur').value)) { showNotification('Enter the current PIN to remove it.', 'error'); return; }
+            appState.settings = { ...(appState.settings || {}), editPinHash: '' };
+            auditAdd({ module: 'Security', action: 'Edit PIN removed' });
+            editPinClearInputs();
+            saveState();
+            showNotification('Edit Records PIN removed. Records cannot be edited until a new PIN is set.');
+        }
+
+        // ---- badge in the log ----
+        function issueEditedBadge(l) {
+            if (!l || !l.editedAt) return '';
+            const n = auditList().filter(a => a.action === 'Edit' && a.recordId === l.id).length;
+            return `<div><button type="button" data-id="${esc(l.id)}" onclick="event.stopPropagation();openAuditTrail(this.dataset.id)" title="Last edited ${esc(formatDate(l.editedAt))} by ${esc(l.editedBy || '')}. Click to see the audit trail." class="mt-0.5 px-1.5 py-0.5 text-[9px] font-semibold rounded bg-sky-500/10 text-sky-300 border border-sky-500/30 hover:bg-sky-500/20">EDITED${n > 1 ? ' ×' + n : ''}</button></div>`;
+        }
+
+        // ---- PIN prompt ----
+        let eiPendingRec = null, eiRec = null, eiSnap = '', eiPending = null, eiPinFails = 0, eiPinBlockedUntil = 0;
+        const eiEl = id => document.getElementById(id);
+        function eiStable(v) {
+            const s = x => Array.isArray(x) ? x.map(s) : (x && typeof x === 'object') ? Object.keys(x).sort().reduce((o, k) => (o[k] = s(x[k]), o), {}) : x;
+            return JSON.stringify(s(v));
+        }
+        function editIssueStart(idx) {
+            const l = appState.issueLogs[Number(idx)];
+            if (!l) return;
+            if (!editPinIsSet()) { showNotification('To edit records, first set an "Edit Records PIN" under Settings > Thresholds & Config.', 'error'); return; }
+            eiPendingRec = l;
+            eiEl('eiPinInfo').textContent = `${l.id || ''} · ${l.truckId} · ${fmt(l.quantity, 2)} L ${l.fuelType}`;
+            eiEl('eiPinInput').value = ''; eiEl('eiPinErr').classList.add('hidden');
+            eiEl('eiPinModal').classList.remove('hidden');
+            setTimeout(() => eiEl('eiPinInput').focus(), 50);
+        }
+        function eiPinCancel() { eiEl('eiPinModal').classList.add('hidden'); eiEl('eiPinInput').value = ''; eiPendingRec = null; }
+        function eiPinSubmit() {
+            const err = eiEl('eiPinErr'), now = Date.now();
+            if (now < eiPinBlockedUntil) { err.textContent = `Too many wrong attempts. Try again in ${Math.ceil((eiPinBlockedUntil - now) / 1000)} s.`; err.classList.remove('hidden'); return; }
+            if (!editPinMatches(eiEl('eiPinInput').value)) {
+                eiPinFails++;
+                if (eiPinFails >= 5) {
+                    eiPinFails = 0; eiPinBlockedUntil = now + 30000;
+                    err.textContent = 'Too many wrong attempts. Locked for 30 seconds.';
+                    const l = eiPendingRec;
+                    auditAdd({ module: 'Security', action: 'Edit PIN: 5 wrong attempts', recordId: l ? (l.id || '') : '', asset: l ? l.truckId : '' });
+                    saveState();
+                } else err.textContent = `Incorrect PIN. ${5 - eiPinFails} attempt(s) left.`;
+                err.classList.remove('hidden'); eiEl('eiPinInput').value = ''; eiEl('eiPinInput').focus();
+                return;
+            }
+            eiPinFails = 0;
+            const l = eiPendingRec; eiPendingRec = null;
+            eiEl('eiPinModal').classList.add('hidden'); eiEl('eiPinInput').value = '';
+            if (l) eiOpen(l);
+        }
+
+        // ---- edit form ----
+        function eiOpen(l) {
+            eiRec = l; eiSnap = eiStable(l); eiPending = null;
+            const cat = issueCategory(l), purpose = issuePurpose(l), src = issueSource(l);
+            const isGen = cat === 'Gen Set', isService = purpose === 'Servicing', isTrip = cat === 'Vehicle' && purpose === 'Operations';
+            eiEl('eiTitleRef').textContent = l.id || '';
+            const chip = (t, c) => `<span class="px-2 py-0.5 rounded border ${c}">${esc(t)}</span>`;
+            eiEl('eiMeta').innerHTML =
+                chip(src === MAIN_BASE ? 'Main Base (tank stock)' : src + ' fuel card', 'bg-slate-800 text-slate-300 border-slate-700') +
+                chip(cat, 'bg-slate-800 text-slate-300 border-slate-700') +
+                chip(isService ? 'Servicing' : 'Operations', 'bg-slate-800 text-slate-300 border-slate-700') +
+                `<span class="text-slate-500 self-center">Source, category and purpose cannot be changed here. To change them, enter a new record.</span>`;
+            const assets = appState.trucks.filter(t => assetCategory(t) === cat);
+            let opts = assets.map(t => `<option value="${esc(t.id)}">${esc(t.id)}${t.type ? ' - ' + esc(t.type) : ''} (${esc(t.fuelType)})</option>`);
+            if (!assets.some(t => t.id === l.truckId)) opts.unshift(`<option value="${esc(l.truckId)}">${esc(l.truckId)}</option>`);
+            eiEl('eiTruck').innerHTML = opts.join('');
+            eiEl('eiTruck').value = l.truckId;
+            eiEl('eiLblTruck').textContent = isGen ? 'Gen Set' : 'Vehicle / Truck';
+            eiEl('eiDate').value = String(l.date || '').slice(0, 16);
+            eiEl('eiDate').max = nowLocalIso();
+            eiEl('eiProduct').value = issueProductType(l);
+            eiEl('eiFuel').value = l.fuelType;
+            eiEl('eiQty').value = l.quantity;
+            eiEl('eiRate').value = issueRate(l) === null ? '' : issueRate(l);
+            eiUpdateAmount();
+            eiEl('eiMeter').value = hasVal(l.meter) ? l.meter : '';
+            eiEl('eiLblMeter').innerHTML = (isGen ? 'Running hours (hrs)' : 'Odometer (km)') + ' <span class="text-rose-400">*</span>';
+            eiEl('eiLblDriver').innerHTML = (isService ? 'Technician / mechanic' : (isGen ? 'Operator' : 'Driver')) + ' <span class="text-rose-400">*</span>';
+            eiEl('eiLblDisp').innerHTML = (src !== MAIN_BASE ? 'Issuing officer' : 'Dispenser operator') + ' <span class="text-rose-400">*</span>';
+            eiEl('eiDriver').value = l.driver || '';
+            eiEl('eiDispenser').value = l.dispenser || '';
+            eiEl('eiRemarks').value = l.remarks || '';
+            eiEl('eiDestWrap').classList.toggle('hidden', !isTrip);
+            eiEl('eiDest').value = isTrip ? String(l.destination || '') : '';
+            eiEl('eiBy').value = ''; eiEl('eiReason').value = '';
+            eiEl('eiErr').classList.add('hidden');
+            eiEl('eiFormStage').classList.remove('hidden'); eiEl('eiReviewStage').classList.add('hidden');
+            eiEl('editIssueModal').classList.remove('hidden');
+            eiEl('editIssueModal').scrollTop = 0;
+        }
+        function eiClose() { eiEl('editIssueModal').classList.add('hidden'); eiRec = null; eiPending = null; }
+        function eiBack() { eiEl('eiReviewStage').classList.add('hidden'); eiEl('eiFormStage').classList.remove('hidden'); }
+        function eiOnTruck() {
+            const t = appState.trucks.find(x => x.id === eiEl('eiTruck').value);
+            if (t && t.fuelType) eiEl('eiFuel').value = t.fuelType;
+        }
+        function eiUpdateAmount() {
+            const q = parseFloat(eiEl('eiQty').value), r = parseFloat(eiEl('eiRate').value);
+            eiEl('eiAmt').value = (q > 0 && r > 0) ? fmt(r2(q * r), 2) : '';
+        }
+        function eiFail(msg, focusId) {
+            const e = eiEl('eiErr'); e.textContent = msg; e.classList.remove('hidden');
+            if (focusId && eiEl(focusId)) eiEl(focusId).focus();
+            return null;
+        }
+        // The record may have been changed or deleted (e.g. by another device) while the form was open.
+        function eiLive() {
+            if (!eiRec) return null;
+            const live = appState.issueLogs.includes(eiRec) ? eiRec
+                : appState.issueLogs.find(x => x.id === eiRec.id && x.date === eiRec.date && x.truckId === eiRec.truckId);
+            if (!live || eiStable(live) !== eiSnap) {
+                eiClose();
+                showNotification('This record was changed or removed (possibly on another device) while you were editing. Open it again to continue.', 'error');
+                return null;
+            }
+            eiRec = live;
+            return live;
+        }
+        function eiLabels(l) {
+            const cat = issueCategory(l), isGen = cat === 'Gen Set', isService = issuePurpose(l) === 'Servicing', isCard = issueSource(l) !== MAIN_BASE;
+            return {
+                date: 'Date & time', truckId: isGen ? 'Gen set' : 'Vehicle / truck', destination: 'Route / destination', productType: 'Product type',
+                fuelType: 'Fuel type', quantity: 'Quantity (L)', rate: 'Rate (GH₵/L)', amount: 'Amount (GH₵)', meter: isGen ? 'Running hours' : 'Odometer',
+                driver: isService ? 'Technician / mechanic' : (isGen ? 'Operator' : 'Driver'), dispenser: isCard ? 'Issuing officer' : 'Dispenser operator', remarks: 'Remarks / job ref'
+            };
+        }
+        function eiShow(k, v) {
+            if (v === null || v === undefined || v === '') return '—';
+            if (k === 'date') return formatDate(v);
+            if (typeof v === 'number') return fmt(v, 4);
+            return String(v);
+        }
+        function eiStockProblem(l, nw) {
+            const src = issueSource(l), oldQ = Number(l.quantity), oldF = l.fuelType;
+            if (src === MAIN_BASE) {
+                if (nw.fuelType === oldF && Math.abs(nw.quantity - oldQ) < 1e-9) return '';
+                const cur = Number((appState.tanks[nw.fuelType] || {}).current) || 0;
+                const avail = r3(cur + (nw.fuelType === oldF ? oldQ : 0));
+                if (nw.quantity > avail + 0.0005) return `Insufficient fuel stock! New quantity: ${fmt(nw.quantity, 2)} L, available for this record: ${fmt(avail, 2)} L of ${nw.fuelType}.`;
+                return '';
+            }
+            const oldAmt = issueAmount(l), newAmt = nw.rate === null ? 0 : nw.amount;
+            if (newAmt <= oldAmt + 0.004) return '';
+            const bal = cardBalance(src);
+            if (newAmt - oldAmt > bal + 0.004) return `Insufficient ${src} card balance! The new amount is ${money(newAmt)} (was ${money(oldAmt)}), but only ${money(bal)} is available on top of this record.`;
+            return '';
+        }
+        function eiStockEffect(l, nw) {
+            const src = issueSource(l), oldQ = Number(l.quantity), oldF = l.fuelType;
+            if (src === MAIN_BASE) {
+                if (nw.fuelType === oldF && Math.abs(nw.quantity - oldQ) < 1e-9) return '';
+                return FUELS.map(f => {
+                    const cur = Number(appState.tanks[f].current) || 0;
+                    const after = r3(cur + (f === oldF ? oldQ : 0) - (f === nw.fuelType ? nw.quantity : 0));
+                    return Math.abs(after - cur) > 0.0005 ? `<div class="text-xs text-slate-300">Tank stock (${f}): ${fmt(cur, 2)} L &rarr; <strong class="text-emerald-300">${fmt(after, 2)} L</strong></div>` : '';
+                }).join('');
+            }
+            const oldAmt = issueAmount(l), newAmt = nw.rate === null ? 0 : nw.amount;
+            if (Math.abs(newAmt - oldAmt) < 0.005) return '';
+            const bal = cardBalance(src);
+            return `<div class="text-xs text-slate-300">${esc(src)} card balance: ${money(bal)} &rarr; <strong class="text-emerald-300">${money(r2(bal + oldAmt - newAmt))}</strong></div>`;
+        }
+        function eiReview() {
+            const l = eiLive(); if (!l) return;
+            eiEl('eiErr').classList.add('hidden');
+            const g = id => eiEl(id).value;
+            const cat = issueCategory(l), purpose = issuePurpose(l), src = issueSource(l);
+            const isGen = cat === 'Gen Set', isService = purpose === 'Servicing', isTrip = cat === 'Vehicle' && purpose === 'Operations';
+            const old = {
+                date: String(l.date || '').slice(0, 16), truckId: l.truckId, destination: String(l.destination || ''), productType: issueProductType(l),
+                fuelType: l.fuelType, quantity: Number(l.quantity), rate: issueRate(l), amount: issueRate(l) === null ? null : issueAmount(l),
+                meter: hasVal(l.meter) ? Number(l.meter) : null, driver: l.driver || '', dispenser: l.dispenser || '', remarks: l.remarks || ''
+            };
+
+            const date = g('eiDate');
+            if (!date) return eiFail('Enter the date and time.', 'eiDate');
+            if (date > nowLocalIso()) return eiFail('The date cannot be in the future.', 'eiDate');
+            const truckId = g('eiTruck');
+            if (!truckId) return eiFail('Select the ' + (isGen ? 'gen set.' : 'vehicle.'), 'eiTruck');
+            const fuelType = g('eiFuel');
+            if (!FUELS.includes(fuelType)) return eiFail('The fuel type is not valid.');
+            const quantity = parseFloat(g('eiQty'));
+            if (!(quantity > 0)) return eiFail('Enter the quantity dispensed (liters).', 'eiQty');
+            const rateRaw = g('eiRate');
+            const rate = rateRaw === '' ? null : parseFloat(rateRaw);
+            if (rate === null ? old.rate !== null : !(rate > 0)) return eiFail('Enter the rate per liter (GH₵) so the amount can be calculated.', 'eiRate');
+            const meterRaw = g('eiMeter'), meter = meterRaw === '' ? NaN : parseFloat(meterRaw);
+            if (!isFinite(meter)) return eiFail(isGen ? 'Enter the running hours reading.' : 'Enter the odometer reading.', 'eiMeter');
+            const driver = g('eiDriver').trim().replace(/\s+/g, ' ');
+            if (!driver) return eiFail('Enter the ' + (isService ? 'technician / mechanic' : (isGen ? 'operator' : 'driver')) + ' name.', 'eiDriver');
+            const dispenser = g('eiDispenser').trim().replace(/\s+/g, ' ');
+            if (!dispenser) return eiFail('Enter the ' + (src !== MAIN_BASE ? 'issuing officer' : 'dispenser operator') + ' name.', 'eiDispenser');
+            const remarks = g('eiRemarks').trim().replace(/\s+/g, ' ');
+
+            let destination = old.destination, stops = null;
+            if (isTrip) {
+                const raw = g('eiDest').trim();
+                if (!raw) return eiFail('Enter the destination for this trip.', 'eiDest');
+                if (raw !== old.destination) {
+                    const parts = raw.split(/\s*(?:\u2192|->|>)\s*/).map(cleanStop).filter(Boolean);
+                    if (!parts.length) return eiFail('Enter the destination for this trip.', 'eiDest');
+                    const all = buildStops(parts[0], parts.slice(1));
+                    destination = all.join(STOP_SEP);
+                    if (all.length > 1) stops = all;
+                } else if (Array.isArray(l.stops) && l.stops.length > 1) stops = l.stops.slice();
+            }
+            const by = g('eiBy').trim().replace(/\s+/g, ' '), reason = g('eiReason').trim().replace(/\s+/g, ' ');
+            if (by.length < 2) return eiFail('Enter your name (Edited by).', 'eiBy');
+            if (reason.length < 5) return eiFail('Give a reason for the edit (at least 5 characters).', 'eiReason');
+
+            const nw = {
+                date: date === old.date ? old.date : date, truckId, destination, productType: g('eiProduct') || 'N/A', fuelType, quantity, rate,
+                amount: rate === null ? null : r2(quantity * rate), meter, driver, dispenser, remarks
+            };
+            const labels = eiLabels(l), numeric = ['quantity', 'rate', 'amount', 'meter'];
+            const changed = Object.keys(labels).filter(k => numeric.includes(k)
+                ? (old[k] === null || nw[k] === null ? old[k] !== nw[k] : Math.abs(old[k] - nw[k]) > 1e-9)
+                : String(old[k]) !== String(nw[k]));
+            if (!changed.length) return eiFail('No changes were made. Change at least one field, or cancel.');
+
+            if ((changed.includes('date') || changed.includes('fuelType')) && src === MAIN_BASE) {
+                const blk = obStockDateBlock(fuelType, String(date).slice(0, 10), src);
+                if (blk) return eiFail(blk, 'eiDate');
+            }
+            const problem = eiStockProblem(l, nw);
+            if (problem) return eiFail(problem, 'eiQty');
+
+            eiPending = { nw, old, changed, stops, by, reason, labels };
+            const rows = changed.map(k => `<div class="grid grid-cols-3 gap-2 items-start py-2 border-b border-slate-800 last:border-0">
+                    <div class="text-xs text-slate-400">${esc(labels[k])}</div>
+                    <div class="text-xs text-rose-300 line-through break-words">${esc(eiShow(k, old[k]))}</div>
+                    <div class="text-xs text-emerald-300 font-semibold break-words">${esc(eiShow(k, nw[k]))}</div></div>`).join('');
+            eiEl('eiReviewBody').innerHTML = `
+                <div class="p-3 rounded-xl bg-slate-950 border border-slate-800">
+                    <div class="grid grid-cols-3 gap-2 pb-1 border-b border-slate-800 text-[10px] font-semibold uppercase tracking-wider text-slate-500"><div>Field</div><div>Was</div><div>Now</div></div>
+                    ${rows}
+                </div>
+                ${eiStockEffect(l, nw) ? `<div class="p-3 rounded-xl bg-sky-500/5 border border-sky-500/20 space-y-1"><div class="text-[11px] font-semibold text-sky-300">Stock effect</div>${eiStockEffect(l, nw)}</div>` : ''}
+                <div class="p-3 rounded-xl bg-amber-500/5 border border-amber-500/30 text-xs text-slate-300 space-y-1">
+                    <div><span class="text-slate-500">Record:</span> <span class="font-mono">${esc(l.id || '')}</span></div>
+                    <div><span class="text-slate-500">Edited by:</span> <strong>${esc(by)}</strong></div>
+                    <div><span class="text-slate-500">Reason:</span> ${esc(reason)}</div>
+                    ${changed.includes('date') ? '<div class="text-amber-300">The date was changed, so this record will be marked as back-dated.</div>' : ''}
+                </div>
+                <p class="text-[11px] text-slate-500">Nothing is saved until you press Confirm &amp; Save. The change will be permanently recorded in the audit trail.</p>`;
+            eiEl('eiFormStage').classList.add('hidden'); eiEl('eiReviewStage').classList.remove('hidden');
+            eiEl('editIssueModal').scrollTop = 0;
+        }
+        function eiConfirm() {
+            const p = eiPending; if (!p) return;
+            const l = eiLive(); if (!l) return;
+            const problem = eiStockProblem(l, p.nw);
+            if (problem) { eiBack(); eiFail(problem); return; }   // stock changed while the review was open
+
+            const src = issueSource(l), oldQ = Number(l.quantity), oldF = l.fuelType, nw = p.nw;
+            if (src === MAIN_BASE && (nw.fuelType !== oldF || Math.abs(nw.quantity - oldQ) > 1e-9)) {
+                appState.tanks[oldF].current = r3(appState.tanks[oldF].current + oldQ);
+                appState.tanks[nw.fuelType].current = r3(appState.tanks[nw.fuelType].current - nw.quantity);
+            }
+            const before = {}, after = {};
+            p.changed.forEach(k => { before[k] = p.old[k]; after[k] = nw[k]; });
+            p.changed.forEach(k => {
+                if (k === 'rate' || k === 'amount') { if (nw[k] === null) delete l[k]; else l[k] = nw[k]; }
+                else l[k] = nw[k];
+            });
+            if (p.changed.includes('destination')) { if (p.stops) l.stops = p.stops; else delete l.stops; }
+            if (p.changed.includes('date')) {
+                if (!l.manualDate) l.enteredAt = l.enteredAt || p.old.date;
+                l.manualDate = true;
+                l.dateReason = (l.dateReason ? l.dateReason + ' | ' : '') + 'Edited: ' + p.reason;
+            }
+            const at = nowLocalIso();
+            l.editedAt = at; l.editedBy = p.by;
+            auditAdd({
+                at, action: 'Edit', recordId: l.id || '', asset: l.truckId, source: src, by: p.by, reason: p.reason,
+                changes: p.changed.map(k => `${p.labels[k]}: ${eiShow(k, p.old[k])} \u2192 ${eiShow(k, nw[k])}`).join('; '),
+                before, after
+            });
+            eiClose();
+            saveState();
+            showNotification(`Record ${l.id || ''} updated (${p.changed.length} change${p.changed.length > 1 ? 's' : ''}). Saved in the audit trail.`);
+        }
+
+        // ---- audit trail viewer ----
+        function openAuditTrail(filter) {
+            eiEl('auditFilter').value = filter || '';
+            renderAuditTrail();
+            eiEl('auditModal').classList.remove('hidden');
+        }
+        function closeAuditTrail() { eiEl('auditModal').classList.add('hidden'); }
+        function auditFiltered() {
+            const q = String(eiEl('auditFilter').value || '').trim().toLowerCase();
+            return auditList().slice().sort((a, b) => String(b.at).localeCompare(String(a.at)))
+                .filter(e => !q || [e.recordId, e.asset, e.by, e.reason, e.changes, e.action, e.module].join(' ').toLowerCase().includes(q));
+        }
+        function renderAuditTrail() {
+            const all = auditList(), items = auditFiltered();
+            eiEl('auditCount').textContent = all.length ? `Showing ${items.length} of ${all.length} entr${all.length === 1 ? 'y' : 'ies'}` : '';
+            eiEl('auditListBox').innerHTML = items.length ? items.map(e => {
+                const sec = e.module === 'Security';
+                return `<div class="bg-slate-950 border ${sec ? 'border-amber-500/30' : 'border-slate-800'} rounded-xl px-3 py-2.5 space-y-1">
+                    <div class="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[11px]">
+                        <span class="text-slate-500">${esc(formatDate(e.at))}</span>
+                        <span class="px-1.5 py-0.5 rounded text-[9px] font-semibold ${sec ? 'bg-amber-500/10 text-amber-300 border border-amber-500/30' : 'bg-sky-500/10 text-sky-300 border border-sky-500/30'}">${esc((e.action || '').toUpperCase())}</span>
+                        ${e.recordId ? `<span class="font-mono text-slate-300">${esc(e.recordId)}</span>` : ''}
+                        ${e.asset ? `<span class="font-semibold text-white">${esc(e.asset)}</span>` : ''}
+                        ${e.by ? `<span class="text-slate-400">by <strong class="text-slate-200">${esc(e.by)}</strong></span>` : ''}
+                    </div>
+                    ${e.reason ? `<div class="text-xs text-slate-300"><span class="text-slate-500">Reason:</span> ${esc(e.reason)}</div>` : ''}
+                    ${e.changes ? `<div class="text-xs text-slate-400 break-words">${esc(e.changes)}</div>` : ''}
+                </div>`;
+            }).join('') : `<div class="py-10 text-center text-sm text-slate-500"><i class="fa-solid fa-clipboard-list mr-2"></i>${all.length ? 'No entries match your search.' : 'No audit entries yet. Edits to dispensing records will appear here.'}</div>`;
+        }
+        function exportAuditCsv() {
+            const items = auditFiltered();
+            if (!items.length) { showNotification('No audit entries to export.', 'error'); return; }
+            downloadCsv(`audit_trail_${localDateStr()}.csv`, [
+                ['When', 'Module', 'Action', 'Record ref', 'Asset', 'Source', 'Edited by', 'Reason', 'Changes'],
+                ...items.map(e => [String(e.at).replace('T', ' '), e.module, e.action, e.recordId, e.asset, e.source, e.by, e.reason, e.changes])
+            ]);
         }
 
         // 4. Fleet Management
@@ -5475,6 +6011,7 @@
             CARD_BASES.forEach(b => { document.getElementById('cfgCardThr_' + b).value = cardThreshold(b) || ''; });
             renderPinStatus();
             renderClearPinStatus();
+            renderEditPinStatus();
             if (typeof tlRenderSettings === 'function') tlRenderSettings();
         }
 
@@ -6847,7 +7384,7 @@ document.addEventListener('DOMContentLoaded', () => { obBuildModals(); obRenderA
         const BUILT_IN = /^https:\/\/script\.google\.com\/.+\/exec/.test(DEFAULT_URL);
         const K_URL = 'fms_sheets_url', K_KEY = 'fms_sheets_key', K_VER = 'fms_sheets_version', K_DIRTY = 'fms_sheets_dirty', K_BASE = 'fms_sheets_base';
         const POLL_MS = 20000;
-        const ARRAYS = ['receiveLogs', 'issueLogs', 'cardLoads', 'trucks', 'destinations', 'fpSuppliers', 'fpEntries'];
+        const ARRAYS = ['receiveLogs', 'issueLogs', 'cardLoads', 'trucks', 'destinations', 'fpSuppliers', 'fpEntries', 'auditLogs'];
         const keyOf = n => n === 'destinations' ? 'name' : 'id';
 
         /* ---- storage: the URL is kept in localStorage AND a long-lived cookie, so it survives refreshes ---- */
@@ -6958,7 +7495,7 @@ document.addEventListener('DOMContentLoaded', () => { obBuildModals(); obRenderA
             if (!sup.length && !ent.length && legacy) { sup = clone(legacy.suppliers || []); ent = clone(legacy.entries || []); v2 = !!legacy.v2; }
             const t = cfg.tanks || {};
             const out = { ...base, ...cfg, tanks: { Diesel: { ...base.tanks.Diesel, ...t.Diesel }, Petrol: { ...base.tanks.Petrol, ...t.Petrol } } };
-            ['receiveLogs', 'issueLogs', 'cardLoads', 'trucks', 'destinations'].forEach(a => { out[a] = Array.isArray(w[a]) ? clone(w[a]) : []; });
+            ['receiveLogs', 'issueLogs', 'cardLoads', 'trucks', 'destinations', 'auditLogs'].forEach(a => { out[a] = Array.isArray(w[a]) ? clone(w[a]) : []; });
             out.fuelPurchases = { v2, suppliers: sup, entries: ent };
             return out;
         }
@@ -7085,6 +7622,7 @@ document.addEventListener('DOMContentLoaded', () => { obBuildModals(); obRenderA
         function applyRemote(remoteW, ver, mergedW, baseOverride) {
             const baseW = baseOverride || syncedWire();
             const next = fromWire(mergedW || remoteW);
+            if (!Array.isArray((mergedW || remoteW).auditLogs) && Array.isArray(appState.auditLogs)) next.auditLogs = clone(appState.auditLogs);   // older backend without the Audit Trail tab
             const orphans = fixLinks(next, baseW);
             if (baseW) reconcileTanks(fromWire(baseW), next);
             appState = next;
