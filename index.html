@@ -339,6 +339,18 @@
         html.light #installBanner button.ib-go { background: #0284c7; border-color: #0284c7; color: #fff; }
         @media (min-width: 640px) { #installBanner { left: auto; right: 16px; width: 400px; } }
         @media print { #installBanner, #installAppBtn { display: none !important; } }
+    
+        /* ===== Searchable vehicle / asset picker (type to filter) ===== */
+        .ss-wrap { position: relative; }
+        .ss-wrap > select.ss-native { position: absolute; left: 0; top: 0; width: 100%; height: 100%; opacity: 0; pointer-events: none; }
+        .ss-input { padding-right: 2rem !important; text-overflow: ellipsis; cursor: text; }
+        .ss-caret { position: absolute; right: .75rem; top: 50%; transform: translateY(-50%); pointer-events: none; font-size: .65rem; opacity: .6; }
+        .ss-list { position: fixed; z-index: 100000; overflow-y: auto; overscroll-behavior: contain; padding: .25rem; }
+        .ss-item { padding: .45rem .6rem; font-size: .8125rem; border-radius: .5rem; cursor: pointer; line-height: 1.25; }
+        .ss-item.ss-active { background: rgba(14, 165, 233, .20); }
+        .ss-item.ss-selected { font-weight: 600; }
+        .ss-item mark { background: rgba(250, 204, 21, .35); color: inherit; border-radius: 2px; padding: 0 1px; }
+        .ss-empty, .ss-more { padding: .55rem .6rem; font-size: .75rem; opacity: .7; }
     </style>
 </head>
 <body class="h-full flex flex-col overflow-hidden bg-slate-950 text-slate-100 antialiased selection:bg-sky-500 selection:text-white">
@@ -7504,5 +7516,163 @@ document.addEventListener('DOMContentLoaded', () => { obBuildModals(); obRenderA
         return { check: () => check(true) };
     })();
     </script>
+
+<script>
+/* Searchable picker for the vehicle / gen set (registration) dropdowns.
+   The original <select> stays in the page (hidden) so every existing function that reads or sets
+   its value, rebuilds its options or listens for "change" keeps working unchanged. */
+(function () {
+    const MAX_SHOWN = 80;
+    const norm = t => String(t == null ? '' : t).toLowerCase().replace(/[^a-z0-9]+/g, '');
+    const escH = v => String(v == null ? '' : v).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+
+    function enhance(sel) {
+        if (!sel || sel.dataset.ss) return;
+        sel.dataset.ss = '1';
+
+        const wrap = document.createElement('div');
+        wrap.className = 'ss-wrap';
+        sel.parentNode.insertBefore(wrap, sel);
+        wrap.appendChild(sel);
+        sel.classList.add('ss-native');
+        sel.tabIndex = -1;
+        sel.setAttribute('aria-hidden', 'true');
+
+        const inp = document.createElement('input');
+        inp.type = 'text';
+        inp.autocomplete = 'off';
+        inp.spellcheck = false;
+        inp.setAttribute('autocapitalize', 'characters');
+        inp.setAttribute('role', 'combobox');
+        inp.setAttribute('aria-autocomplete', 'list');
+        inp.className = sel.className.replace(/\bss-native\b/, '') + ' ss-input';
+        const caret = document.createElement('i');
+        caret.className = 'fa-solid fa-chevron-down ss-caret';
+        wrap.appendChild(inp);
+        wrap.appendChild(caret);
+
+        const list = document.createElement('div');
+        list.className = 'ss-list bg-slate-900 border border-slate-700 rounded-xl shadow-2xl text-slate-100';
+        list.style.display = 'none';
+        list.setAttribute('role', 'listbox');
+        document.body.appendChild(list);
+
+        let open = false, active = -1, shown = [];
+
+        const optText = o => (o ? o.text : '');
+        const selectedText = () => optText(sel.options[sel.selectedIndex]);
+        function refresh() {
+            if (document.activeElement !== inp || !open) inp.value = selectedText();
+            inp.placeholder = sel.options.length ? 'Type to search…' : 'Nothing to select yet';
+            inp.disabled = sel.disabled;
+        }
+
+        function position() {
+            const r = inp.getBoundingClientRect();
+            const below = window.innerHeight - r.bottom - 8, above = r.top - 8;
+            const up = below < 180 && above > below;
+            const h = Math.max(120, Math.min(300, up ? above : below));
+            list.style.left = r.left + 'px';
+            list.style.width = r.width + 'px';
+            list.style.maxHeight = h + 'px';
+            if (up) { list.style.top = ''; list.style.bottom = (window.innerHeight - r.top + 4) + 'px'; }
+            else { list.style.bottom = ''; list.style.top = (r.bottom + 4) + 'px'; }
+        }
+
+        function highlight(text, q) {
+            if (!q) return escH(text);
+            const toks = q.toLowerCase().split(/\s+/).filter(Boolean);
+            let out = escH(text);
+            toks.forEach(t => {
+                const re = new RegExp('(' + t.replace(/[.*+?^${}()|[\]\\]/g, '\\$&').replace(/&/g, '&amp;') + ')', 'ig');
+                out = out.replace(/(<mark>.*?<\/mark>)|([^<]+)/g, (m, a, b) => a ? a : b.replace(re, '<mark>$1</mark>'));
+            });
+            return out;
+        }
+
+        function build(q) {
+            const rawQ = (q || '').trim();
+            const toks = rawQ.toLowerCase().split(/\s+/).filter(Boolean);
+            const nq = norm(rawQ);
+            const all = Array.from(sel.options).map((o, i) => ({ i, v: o.value, t: o.text, n: norm(o.text), l: o.text.toLowerCase() }));
+            let rows = all;
+            if (toks.length) {
+                rows = all.filter(r => toks.every(t => r.l.includes(t)) || (nq && r.n.includes(nq)));
+                // matches that start with what was typed come first (the registration itself), then the rest
+                rows.sort((a, b) => (b.n.startsWith(nq) - a.n.startsWith(nq)) || (a.n.indexOf(nq) - b.n.indexOf(nq)) || (a.i - b.i));
+            }
+            shown = rows.slice(0, MAX_SHOWN);
+            const cur = sel.selectedIndex;
+            let html = shown.map((r, k) =>
+                '<div class="ss-item' + (r.i === cur ? ' ss-selected' : '') + '" role="option" data-k="' + k + '">' + highlight(r.t, toks.length ? rawQ : '') + '</div>').join('');
+            if (!shown.length) html = '<div class="ss-empty">No match for “' + escH(rawQ) + '”. Check the registration number.</div>';
+            else if (rows.length > shown.length) html += '<div class="ss-more">' + (rows.length - shown.length) + ' more — keep typing to narrow down</div>';
+            list.innerHTML = html;
+            const sIdx = shown.findIndex(r => r.i === cur);
+            setActive(toks.length ? (shown.length ? 0 : -1) : sIdx, !toks.length);
+        }
+
+        function setActive(k, scroll) {
+            active = k;
+            list.querySelectorAll('.ss-item').forEach((el, j) => el.classList.toggle('ss-active', j === k));
+            if (k >= 0 && scroll !== false) { const el = list.querySelector('.ss-item[data-k="' + k + '"]'); if (el) el.scrollIntoView({ block: 'nearest' }); }
+        }
+
+        function openList(filterText) {
+            if (sel.disabled) return;
+            open = true;
+            build(filterText);
+            position();
+            list.style.display = 'block';
+            inp.setAttribute('aria-expanded', 'true');
+        }
+        function closeList() {
+            open = false;
+            list.style.display = 'none';
+            inp.setAttribute('aria-expanded', 'false');
+            inp.value = selectedText();
+        }
+        function choose(k) {
+            const r = shown[k];
+            if (!r) return;
+            const changed = sel.selectedIndex !== r.i;
+            sel.selectedIndex = r.i;
+            closeList();
+            if (changed) sel.dispatchEvent(new Event('change', { bubbles: true }));
+        }
+
+        inp.addEventListener('focus', () => { openList(''); setTimeout(() => inp.select(), 0); });
+        inp.addEventListener('click', () => { if (!open) openList(''); });
+        inp.addEventListener('input', () => { if (!open) { open = true; list.style.display = 'block'; } build(inp.value); position(); });
+        inp.addEventListener('keydown', e => {
+            if (e.key === 'ArrowDown') { e.preventDefault(); if (!open) openList(''); else setActive(Math.min(shown.length - 1, active + 1)); }
+            else if (e.key === 'ArrowUp') { e.preventDefault(); if (open) setActive(Math.max(0, active - 1)); }
+            else if (e.key === 'Enter') { if (open) { e.preventDefault(); if (active >= 0) choose(active); else if (shown.length === 1) choose(0); } }
+            else if (e.key === 'Escape') { if (open) { e.preventDefault(); closeList(); } }
+            else if (e.key === 'Tab') { if (open && inp.value.trim() && active >= 0 && inp.value !== selectedText()) choose(active); else if (open) closeList(); }
+        });
+        inp.addEventListener('blur', () => setTimeout(() => { if (document.activeElement !== inp && open) closeList(); }, 120));
+        // mousedown (not click) so the choice lands before the input loses focus
+        list.addEventListener('mousedown', e => {
+            e.preventDefault();
+            const el = e.target.closest('.ss-item');
+            if (el) choose(+el.dataset.k);
+        });
+        list.addEventListener('mousemove', e => { const el = e.target.closest('.ss-item'); if (el && +el.dataset.k !== active) setActive(+el.dataset.k, false); });
+        window.addEventListener('resize', () => { if (open) position(); });
+        window.addEventListener('scroll', e => { if (open && !list.contains(e.target)) position(); }, true);
+
+        // Keep the visible box in step when other code rebuilds the options or sets .value directly
+        const d = Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype, 'value');
+        Object.defineProperty(sel, 'value', { get() { return d.get.call(sel); }, set(v) { d.set.call(sel, v); refresh(); }, configurable: true });
+        new MutationObserver(() => { refresh(); if (open) build(inp.value === selectedText() ? '' : inp.value); }).observe(sel, { childList: true, subtree: true });
+        sel.addEventListener('change', refresh);
+        refresh();
+    }
+
+    function init() { ['issTruckSelect', 'rptTruck'].forEach(id => enhance(document.getElementById(id))); }
+    if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init); else init();
+})();
+</script>
 </body>
 </html>
