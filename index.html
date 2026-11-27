@@ -568,6 +568,85 @@
                             </div>
                         </div>
                     </div>
+
+                    <!-- Fuel consumption analytics -->
+                    <section id="dashUsageSection" class="space-y-4">
+                        <div class="flex flex-wrap items-end justify-between gap-3">
+                            <div class="flex items-center gap-2"><i class="fa-solid fa-chart-column text-sky-400"></i><h3 class="font-bold text-white text-sm uppercase tracking-wider">Fuel Consumption Analytics</h3></div>
+                            <div class="flex flex-wrap items-center gap-2">
+                                <select id="duPeriod" onchange="dashUseSet('period', this.value)" aria-label="Period" class="bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-xs text-slate-100 focus:outline-none focus:border-sky-500">
+                                    <option value="month">This month</option>
+                                    <option value="lastMonth">Last month</option>
+                                    <option value="3m">Last 3 months</option>
+                                    <option value="year">This year</option>
+                                    <option value="all">All time</option>
+                                </select>
+                                <select id="duCat" onchange="dashUseSet('cat', this.value)" aria-label="Asset type" class="bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-xs text-slate-100 focus:outline-none focus:border-sky-500">
+                                    <option value="ALL">All assets</option>
+                                    <option value="Vehicle">Vehicles / Trucks</option>
+                                    <option value="Gen Set">Gen Sets</option>
+                                </select>
+                                <select id="duMetric" onchange="dashUseSet('metric', this.value)" aria-label="Measure" class="bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-xs text-slate-100 focus:outline-none focus:border-sky-500">
+                                    <option value="L">Litres</option>
+                                    <option value="C">Cost (GH₵)</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <!-- Usage KPIs -->
+                        <div class="bg-slate-900 border border-slate-800 rounded-2xl">
+                            <div class="grid grid-cols-2 lg:grid-cols-4 divide-x divide-y lg:divide-y-0 divide-slate-800">
+                                <div class="p-4"><p class="text-[11px] text-slate-500">Fuel issued</p><p class="text-xl font-bold text-white mt-0.5" id="duKpiLitres">0 L</p><p class="text-[11px] mt-0.5" id="duKpiLitresDelta"></p></div>
+                                <div class="p-4"><p class="text-[11px] text-slate-500">Fuel cost</p><p class="text-xl font-bold text-white mt-0.5" id="duKpiCost">GH₵ 0</p><p class="text-[11px] mt-0.5" id="duKpiCostDelta"></p></div>
+                                <div class="p-4"><p class="text-[11px] text-slate-500">Assets fuelled</p><p class="text-xl font-bold text-white mt-0.5" id="duKpiAssets">0</p><p class="text-[11px] text-slate-500 mt-0.5" id="duKpiFills"></p></div>
+                                <div class="p-4"><p class="text-[11px] text-slate-500">Average per fill</p><p class="text-xl font-bold text-white mt-0.5" id="duKpiAvg">0 L</p><p class="text-[11px] text-slate-500 mt-0.5" id="duKpiTop"></p></div>
+                            </div>
+                        </div>
+
+                        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                            <!-- Monthly -->
+                            <div class="lg:col-span-2 bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-xl flex flex-col">
+                                <div class="flex justify-between items-center mb-4 gap-2">
+                                    <h3 class="font-bold text-white text-base flex items-center gap-2"><i class="fa-solid fa-calendar-days text-sky-400"></i> Monthly Fuel Issued</h3>
+                                    <span class="text-xs text-slate-400">Last 12 months · by fuel type</span>
+                                </div>
+                                <div class="flex-1 min-h-[280px] relative">
+                                    <canvas id="duMonthlyChart"></canvas>
+                                    <div id="duMonthlyEmpty" class="hidden absolute inset-0 flex items-center justify-center text-sm text-slate-500">No fuel has been issued yet.</div>
+                                </div>
+                            </div>
+
+                            <!-- Share -->
+                            <div class="bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-xl flex flex-col">
+                                <div class="flex justify-between items-center mb-4 gap-2">
+                                    <h3 class="font-bold text-white text-base flex items-center gap-2"><i class="fa-solid fa-chart-pie text-sky-400"></i> Fuel Share</h3>
+                                    <select id="duSplit" onchange="dashUseSet('split', this.value)" aria-label="Split by" class="bg-slate-950 border border-slate-700 rounded-xl px-2.5 py-1.5 text-xs text-slate-100 focus:outline-none focus:border-sky-500">
+                                        <option value="group">By group</option>
+                                        <option value="category">By asset type</option>
+                                        <option value="source">By source</option>
+                                        <option value="purpose">By purpose</option>
+                                        <option value="fuel">By fuel type</option>
+                                    </select>
+                                </div>
+                                <div class="flex-1 min-h-[280px] relative">
+                                    <canvas id="duSplitChart"></canvas>
+                                    <div id="duSplitEmpty" class="hidden absolute inset-0 flex items-center justify-center text-sm text-slate-500 text-center px-4">No fuel issued in this period.</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Top assets -->
+                        <div class="bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-xl">
+                            <div class="flex justify-between items-center mb-4 gap-2">
+                                <h3 class="font-bold text-white text-base flex items-center gap-2"><i class="fa-solid fa-truck text-sky-400"></i> Top Trucks &amp; Machines by Fuel</h3>
+                                <span class="text-xs text-slate-400" id="duTopSub">Top 10</span>
+                            </div>
+                            <div class="relative" id="duAssetsWrap" style="height:340px">
+                                <canvas id="duAssetsChart"></canvas>
+                                <div id="duAssetsEmpty" class="hidden absolute inset-0 flex items-center justify-center text-sm text-slate-500">No fuel issued in this period.</div>
+                            </div>
+                        </div>
+                    </section>
                 </section>
 
                 <!-- TAB 2: RECEIVE FUEL -->
@@ -5059,6 +5138,204 @@
                     scales: {
                         x: { ticks: { color: chartTxt(), font: { size: 10 } }, grid: { color: chartGrid(0.2) } },
                         y: { ticks: { color: chartTxt(), font: { size: 10 } }, grid: { color: chartGrid(0.2) } }
+                    }
+                }
+            });
+            try { renderDashboardUsage(); } catch (e) { console.error('Fuel analytics failed', e); }
+        }
+
+
+        // ===== Dashboard: fuel consumption analytics (monthly, per asset, share) =====
+        let dashUse = { period: 'month', cat: 'ALL', metric: 'L', split: 'group' };
+        const usageCharts = { monthly: null, assets: null, split: null };
+        const USE_FUEL_COL = { Diesel: '#f59e0b', Petrol: '#0ea5e9' };
+        const USE_PALETTE = ['#38bdf8', '#f59e0b', '#34d399', '#a78bfa', '#fb7185', '#2dd4bf', '#facc15', '#818cf8', '#f472b6'];
+        const USE_OTHER_COL = '#64748b';
+
+        function dashUseSet(k, v) { dashUse[k] = v; renderDashboardUsage(); }
+        function useVal(l) { return dashUse.metric === 'C' ? issueAmount(l) : (Number(l.quantity) || 0); }
+        function useFmt(v) { return dashUse.metric === 'C' ? 'GH₵ ' + fmt(v, 0) : fmt(v, 0) + ' L'; }
+        function useDay(l) { return String(l.date).slice(0, 10); }
+
+        // Current period and the period just before it, for the up/down comparison.
+        function dashUseRange() {
+            const g = ghParts(ghNow()), y = g.y, m = g.m - 1, d = g.d;
+            const ymd = (yy, mm, dd) => new Date(Date.UTC(yy, mm, dd)).toISOString().slice(0, 10);
+            const dim = (yy, mm) => new Date(Date.UTC(yy, mm + 1, 0)).getUTCDate();
+            switch (dashUse.period) {
+                case 'month': return { from: ymd(y, m, 1), to: ymd(y, m, d), pFrom: ymd(y, m - 1, 1), pTo: ymd(y, m - 1, Math.min(d, dim(y, m - 1))), vs: 'last month' };
+                case 'lastMonth': return { from: ymd(y, m - 1, 1), to: ymd(y, m, 0), pFrom: ymd(y, m - 2, 1), pTo: ymd(y, m - 1, 0), vs: 'the month before' };
+                case '3m': return { from: ymd(y, m - 2, 1), to: ymd(y, m, d), pFrom: ymd(y, m - 5, 1), pTo: ymd(y, m - 3, Math.min(d, dim(y, m - 3))), vs: 'the previous 3 months' };
+                case 'year': return { from: ymd(y, 0, 1), to: ymd(y, m, d), pFrom: ymd(y - 1, 0, 1), pTo: ymd(y - 1, m, Math.min(d, dim(y - 1, m))), vs: 'last year' };
+                default: return { from: '', to: '', pFrom: null, pTo: null, vs: '' };
+            }
+        }
+
+        function usageLogs() {
+            return appState.issueLogs.filter(l => fuelOk(l) && (dashUse.cat === 'ALL' || issueCategory(l) === dashUse.cat));
+        }
+
+        function useDelta(el, cur, prev, vs) {
+            if (!el) return;
+            if (prev === null || vs === '') { el.textContent = ''; el.className = 'text-[11px] mt-0.5'; return; }
+            if (!prev) { el.textContent = cur ? 'No fuel in ' + vs : ''; el.className = 'text-[11px] text-slate-500 mt-0.5'; return; }
+            const pct = (cur - prev) / prev * 100, up = pct > 0.05, down = pct < -0.05;
+            el.textContent = (up ? '▲ ' : down ? '▼ ' : '') + Math.abs(pct).toFixed(1) + '% vs ' + vs;
+            // more fuel burned is the unfavourable direction
+            el.className = 'text-[11px] mt-0.5 ' + (up ? 'text-rose-400' : down ? 'text-emerald-400' : 'text-slate-500');
+        }
+
+        function useSetEmpty(id, empty) {
+            const el = document.getElementById(id); if (el) el.classList.toggle('hidden', !empty);
+        }
+
+        function renderDashboardUsage() {
+            if (!document.getElementById('duMonthlyChart') || typeof Chart === 'undefined') return;
+            const logs = usageLogs();
+            const rg = dashUseRange();
+            const inR = (l, f, t) => (!f || useDay(l) >= f) && (!t || useDay(l) <= t);
+            const cur = logs.filter(l => inR(l, rg.from, rg.to));
+            const prev = rg.pFrom ? logs.filter(l => inR(l, rg.pFrom, rg.pTo)) : null;
+            const sumQ = a => a.reduce((t, l) => t + (Number(l.quantity) || 0), 0);
+            const sumC = a => a.reduce((t, l) => t + issueAmount(l), 0);
+
+            // ----- KPIs -----
+            const litres = sumQ(cur), cost = sumC(cur);
+            const assets = new Set(cur.map(l => l.truckId).filter(Boolean));
+            const setTxt = (id, v) => { const e = document.getElementById(id); if (e) e.textContent = v; };
+            setTxt('duKpiLitres', fmt(litres, 0) + ' L');
+            setTxt('duKpiCost', 'GH₵ ' + fmt(cost, 0));
+            setTxt('duKpiAssets', fmt(assets.size, 0));
+            setTxt('duKpiFills', fmt(cur.length, 0) + (cur.length === 1 ? ' fill' : ' fills'));
+            setTxt('duKpiAvg', cur.length ? fmt(litres / cur.length, 1) + ' L' : '0 L');
+            useDelta(document.getElementById('duKpiLitresDelta'), litres, prev ? sumQ(prev) : null, rg.vs);
+            useDelta(document.getElementById('duKpiCostDelta'), cost, prev ? sumC(prev) : null, rg.vs);
+
+            const txt = chartTxt(), grid = chartGrid(0.2);
+
+            // ----- Monthly stacked bars (last 12 months, always) -----
+            const g = ghParts(ghNow()), y = g.y, m = g.m - 1;
+            const keys = [], labels = [];
+            for (let i = 11; i >= 0; i--) {
+                const dt = new Date(Date.UTC(y, m - i, 1));
+                keys.push(dt.toISOString().slice(0, 7));
+                labels.push(dt.toLocaleDateString('en-US', { month: 'short', year: '2-digit', timeZone: 'UTC' }));
+            }
+            const monthly = { Diesel: keys.map(() => 0), Petrol: keys.map(() => 0) };
+            logs.forEach(l => {
+                const i = keys.indexOf(String(l.date).slice(0, 7));
+                if (i >= 0 && monthly[l.fuelType]) monthly[l.fuelType][i] += useVal(l);
+            });
+            const monthlyAny = keys.some((k, i) => monthly.Diesel[i] + monthly.Petrol[i] > 0);
+            useSetEmpty('duMonthlyEmpty', !monthlyAny);
+            if (usageCharts.monthly) usageCharts.monthly.destroy();
+            usageCharts.monthly = new Chart(document.getElementById('duMonthlyChart').getContext('2d'), {
+                type: 'bar',
+                data: {
+                    labels,
+                    datasets: ['Diesel', 'Petrol'].filter(f => isFuelActive(f)).map(f => ({
+                        label: f, data: monthly[f], backgroundColor: USE_FUEL_COL[f], borderRadius: 4, maxBarThickness: 34
+                    }))
+                },
+                options: {
+                    responsive: true, maintainAspectRatio: false,
+                    interaction: { mode: 'index', intersect: false },
+                    plugins: {
+                        legend: { labels: { color: txt, font: { size: 11 } } },
+                        tooltip: {
+                            callbacks: {
+                                label: c => ' ' + c.dataset.label + ': ' + useFmt(c.parsed.y),
+                                footer: items => items.length > 1 ? 'Total: ' + useFmt(items.reduce((t, i) => t + i.parsed.y, 0)) : ''
+                            }
+                        }
+                    },
+                    scales: {
+                        x: { stacked: true, ticks: { color: txt, font: { size: 10 } }, grid: { display: false } },
+                        y: { stacked: true, beginAtZero: true, ticks: { color: txt, font: { size: 10 }, callback: v => fmt(v, 0) }, grid: { color: grid },
+                             title: { display: true, text: dashUse.metric === 'C' ? 'GH₵' : 'Litres', color: txt, font: { size: 10 } } }
+                    }
+                }
+            });
+
+            // ----- Top trucks & machines (stacked by fuel type) -----
+            const per = {};
+            cur.forEach(l => {
+                const id = l.truckId || '(unassigned)';
+                const o = per[id] = per[id] || { id, Diesel: 0, Petrol: 0, fills: 0, litres: 0, last: '' };
+                if (o[l.fuelType] !== undefined) o[l.fuelType] += useVal(l);
+                o.fills++; o.litres += Number(l.quantity) || 0;
+                if (useDay(l) > o.last) o.last = useDay(l);
+            });
+            const top = Object.values(per).sort((a, b) => (b.Diesel + b.Petrol) - (a.Diesel + a.Petrol)).slice(0, 10);
+            useSetEmpty('duAssetsEmpty', top.length === 0);
+            setTxt('duTopSub', top.length ? 'Top ' + top.length + ' of ' + Object.keys(per).length + ' fuelled' : 'Top 10');
+            const wrap = document.getElementById('duAssetsWrap');
+            if (wrap) wrap.style.height = Math.max(220, 56 + top.length * 30) + 'px';
+            const topLead = top[0];
+            setTxt('duKpiTop', topLead ? 'Highest: ' + topLead.id : '');
+            if (usageCharts.assets) usageCharts.assets.destroy();
+            usageCharts.assets = new Chart(document.getElementById('duAssetsChart').getContext('2d'), {
+                type: 'bar',
+                data: {
+                    labels: top.map(t => t.id),
+                    datasets: ['Diesel', 'Petrol'].filter(f => isFuelActive(f)).map(f => ({
+                        label: f, data: top.map(t => t[f]), backgroundColor: USE_FUEL_COL[f], borderRadius: 4, maxBarThickness: 22
+                    }))
+                },
+                options: {
+                    indexAxis: 'y', responsive: true, maintainAspectRatio: false,
+                    interaction: { mode: 'index', intersect: false },
+                    plugins: {
+                        legend: { labels: { color: txt, font: { size: 11 } } },
+                        tooltip: {
+                            callbacks: {
+                                label: c => ' ' + c.dataset.label + ': ' + useFmt(c.parsed.x),
+                                afterBody: items => {
+                                    const t = top[items[0].dataIndex], tr = appState.trucks.find(x => x.id === t.id);
+                                    return [(tr && tr.type ? tr.type + ' · ' : '') + t.fills + (t.fills === 1 ? ' fill' : ' fills') + ' · ' + fmt(t.litres, 0) + ' L', 'Last fill: ' + t.last];
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        x: { stacked: true, beginAtZero: true, ticks: { color: txt, font: { size: 10 }, callback: v => fmt(v, 0) }, grid: { color: grid } },
+                        y: { stacked: true, ticks: { color: txt, font: { size: 11 } }, grid: { display: false } }
+                    }
+                }
+            });
+
+            // ----- Share doughnut -----
+            const keyOf = l => {
+                switch (dashUse.split) {
+                    case 'category': return issueCategory(l) || 'Vehicle';
+                    case 'source': return issueSource(l);
+                    case 'purpose': return issuePurpose(l);
+                    case 'fuel': return l.fuelType || 'Other';
+                    default: return assetGroup(appState.trucks.find(t => t.id === l.truckId)) || NO_GROUP;
+                }
+            };
+            const share = {};
+            cur.forEach(l => { const k = keyOf(l); share[k] = (share[k] || 0) + useVal(l); });
+            let rows = Object.entries(share).filter(r => r[1] > 0).sort((a, b) => b[1] - a[1]);
+            if (rows.length > 9) {
+                const rest = rows.slice(8).reduce((t, r) => t + r[1], 0);
+                rows = rows.slice(0, 8).concat([['Other', rest]]);
+            }
+            const shareTotal = rows.reduce((t, r) => t + r[1], 0);
+            useSetEmpty('duSplitEmpty', rows.length === 0);
+            const colorFor = (name, i) => dashUse.split === 'fuel' && USE_FUEL_COL[name] ? USE_FUEL_COL[name] : (name === 'Other' ? USE_OTHER_COL : USE_PALETTE[i % USE_PALETTE.length]);
+            if (usageCharts.split) usageCharts.split.destroy();
+            usageCharts.split = new Chart(document.getElementById('duSplitChart').getContext('2d'), {
+                type: 'doughnut',
+                data: {
+                    labels: rows.map(r => r[0]),
+                    datasets: [{ data: rows.map(r => r[1]), backgroundColor: rows.map((r, i) => colorFor(r[0], i)), borderColor: isLightTheme() ? '#ffffff' : '#0f172a', borderWidth: 2 }]
+                },
+                options: {
+                    responsive: true, maintainAspectRatio: false, cutout: '62%',
+                    plugins: {
+                        legend: { position: 'bottom', labels: { color: txt, font: { size: 11 }, boxWidth: 10, boxHeight: 10, padding: 10 } },
+                        tooltip: { callbacks: { label: c => ' ' + c.label + ': ' + useFmt(c.parsed) + ' (' + (shareTotal ? (c.parsed / shareTotal * 100).toFixed(1) : 0) + '%)' } }
                     }
                 }
             });
