@@ -423,6 +423,11 @@
                     <span>Reports</span>
                 </a>
 
+                <a href="#" onclick="switchTab('analytics')" id="nav-analytics" class="nav-item flex items-center space-x-3 px-3.5 py-2.5 rounded-xl font-medium text-sm transition text-slate-400 hover:text-white hover:bg-slate-800/60">
+                    <i class="fa-solid fa-chart-line w-5 text-center"></i>
+                    <span>Fuel Analytics</span>
+                </a>
+
                 <a href="#" onclick="switchTab('reconciliation')" id="nav-reconciliation" class="nav-item flex items-center space-x-3 px-3.5 py-2.5 rounded-xl font-medium text-sm transition text-slate-400 hover:text-white hover:bg-slate-800/60">
                     <i class="fa-solid fa-scale-balanced w-5 text-center"></i>
                     <span>Reconciliation</span>
@@ -1463,6 +1468,18 @@
                 </section>
 
                 <!-- TAB 6: RECONCILIATION & ANALYTICS -->
+                <section id="tab-analytics" class="hidden space-y-6">
+                    <div class="flex flex-wrap items-end justify-between gap-3">
+                        <div class="flex items-center gap-2"><i class="fa-solid fa-chart-line text-sky-400"></i><h3 class="font-bold text-white text-sm uppercase tracking-wider">Fuel Manager Analytics</h3></div>
+                        <div class="flex flex-wrap items-center gap-2">
+                            <select onchange="anSet('p',this.value)" aria-label="Period" class="bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-xs text-slate-100 focus:outline-none focus:border-sky-500"><option value="30">Last 30 days</option><option value="90" selected>Last 90 days</option><option value="365">Last 12 months</option><option value="all">All time</option></select>
+                            <select onchange="anSet('f',this.value)" aria-label="Fuel" class="bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-xs text-slate-100 focus:outline-none focus:border-sky-500"><option value="ALL">All fuels</option><option value="Diesel">Diesel</option><option value="Petrol">Petrol</option></select>
+                            <select onchange="anSet('e',this.value)" aria-label="Efficiency asset type" class="bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-xs text-slate-100 focus:outline-none focus:border-sky-500"><option value="Vehicle">Efficiency: Vehicles (km/L)</option><option value="Gen Set">Efficiency: Gen Sets (L/hr)</option></select>
+                        </div>
+                    </div>
+                    <div id="anGrid" class="grid grid-cols-1 lg:grid-cols-3 gap-6"></div>
+                </section>
+
                 <section id="tab-reconciliation" class="hidden space-y-6">
                     <div class="bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-xl space-y-4">
                         <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
@@ -2754,7 +2771,7 @@
             if (typeof tlGate === 'function' && tlGate(tabId)) return;   // tab is locked: ask for the access PIN first
             currentTab = tabId;
             if (typeof closeSidebar === 'function') closeSidebar();
-            const tabs = ['dashboard', 'receive', 'purchases', 'issue', 'cards', 'fleet', 'destinations', 'reports', 'reconciliation', 'settings'];
+            const tabs = ['dashboard', 'receive', 'purchases', 'issue', 'cards', 'fleet', 'destinations', 'reports', 'analytics', 'reconciliation', 'settings'];
             tabs.forEach(t => {
                 const el = document.getElementById(`tab-${t}`);
                 const nav = document.getElementById(`nav-${t}`);
@@ -2779,6 +2796,7 @@
                 fleet: 'Fleet Vehicle Management',
                 destinations: 'Destinations & Route Allowances',
                 reports: 'Reports',
+                analytics: 'Fuel Analytics',
                 reconciliation: 'Stock Reconciliation & Analytics',
                 settings: 'System Threshold Configuration'
             };
@@ -2792,6 +2810,7 @@
                 if (tabId === 'dashboard') renderDashboardChart();
                 if (tabId === 'reports') renderReports();
                 if (tabId === 'reconciliation') renderAnalyticsCharts();
+                if (tabId === 'analytics') anRender();
             }, 50);
         }
 
@@ -2809,6 +2828,7 @@
             renderAlerts();
             renderDashboardChart();
             renderReports();
+            if (currentTab === 'analytics' && typeof anRender === 'function') anRender();
             if (typeof renderPurchases === 'function') renderPurchases();
             if (typeof obRenderAll === 'function') obRenderAll();
         }
@@ -5341,7 +5361,99 @@
             });
         }
 
-// 9. Reports
+// ===== Fuel Analytics tab =====
+        const AN = { c: {}, p: '90', f: 'ALL', e: 'Vehicle', built: false };
+        const AN_CARDS = [['anStock','fa-water','Tank Level History','Main base, end-of-day litres vs reorder point',2],['anCover','fa-hourglass-half','Stock Cover','Days left at the last 30 days\u2019 issue rate',1],['anPrice','fa-tag','Purchase Price per Litre','GH\u20b5/L on each delivery',2],['anSpend','fa-coins','Monthly Purchase Spend','GH\u20b5 by fuel, last 12 months',1],['anMonth','fa-scale-balanced','Received vs Issued','Main base litres, last 12 months',2],['anAge','fa-hourglass-end','Supplier Payables Ageing','Unpaid purchases by days past due (GH\u20b5)',1],['anSup','fa-truck-field','Supplier Volume & Shortage','Litres received and shortage litres by supplier',2],['anCard','fa-credit-card','Fuel Card Position','Loaded, spent, balance per base (GH\u20b5)',1],['anEff','fa-gauge-high','Fleet Fuel Efficiency','Estimated from meter readings between fills; red = 25% worse than the median',3]];
+        function anSet(k, v) { AN[k] = v; anRender(); }
+        function anBuild() {
+            document.getElementById('anGrid').innerHTML = AN_CARDS.map(([id, ic, t, sub, sp]) => `<div class="${sp === 3 ? 'lg:col-span-3' : sp === 2 ? 'lg:col-span-2' : ''} bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-xl"><div class="flex justify-between items-start gap-3 mb-3"><h3 class="font-bold text-white text-base flex items-center gap-2"><i class="fa-solid ${ic} text-sky-400"></i> ${t}</h3><span class="text-xs text-slate-400 text-right">${sub}</span></div><div class="relative" style="height:${id === 'anEff' ? 320 : 260}px"><canvas id="${id}"></canvas><div id="${id}E" class="hidden absolute inset-0 flex items-center justify-center text-sm text-slate-500 text-center px-4">No data for this selection yet.</div></div></div>`).join('');
+            AN.built = true;
+        }
+        function anMk(id, cfg, empty) {
+            if (AN.c[id]) AN.c[id].destroy();
+            document.getElementById(id + 'E').classList.toggle('hidden', !empty);
+            const t = chartTxt(), o = cfg.options = cfg.options || {};
+            o.responsive = true; o.maintainAspectRatio = false;
+            o.plugins = Object.assign({ legend: { labels: { color: t, font: { size: 11 } } } }, o.plugins || {});
+            Object.values(o.scales = o.scales || {}).forEach(a => { a.ticks = Object.assign({ color: t, font: { size: 10 } }, a.ticks || {}); if (a.grid === undefined) a.grid = { color: chartGrid(0.2) }; });
+            AN.c[id] = new Chart(document.getElementById(id).getContext('2d'), cfg);
+        }
+        function anRender() {
+            if (typeof Chart === 'undefined') return;
+            if (!AN.built) anBuild();
+            const today = localDateStr(), days = AN.p === 'all' ? 365 : +AN.p, from = AN.p === 'all' ? '' : fpAdd(today, -days);
+            const fuels = FUELS.filter(f => isFuelActive(f) && (AN.f === 'ALL' || AN.f === f));
+            const D = l => String(l.date).slice(0, 10), inR = l => !from || D(l) >= from, dm = d => d.slice(8, 10) + '/' + d.slice(5, 7);
+            const rcv = appState.receiveLogs.filter(l => fuelOk(l) && fuels.includes(l.fuelType)), mIss = mainIssues().filter(l => fuelOk(l) && fuels.includes(l.fuelType));
+            const COL = USE_FUEL_COL, hasLogs = appState.receiveLogs.length + appState.issueLogs.length > 0;
+
+            // Tank level history: walk back from today's tank level using each day's net movement
+            const n = AN.p === 'all' ? 180 : days, ds = [];
+            for (let i = n - 1; i >= 0; i--) ds.push(fpAdd(today, -i));
+            const lv = [];
+            fuels.forEach(f => {
+                const net = {};
+                appState.receiveLogs.filter(l => l.fuelType === f).forEach(l => net[D(l)] = (net[D(l)] || 0) + Number(l.quantity));
+                mainIssues().filter(l => l.fuelType === f).forEach(l => net[D(l)] = (net[D(l)] || 0) - Number(l.quantity));
+                let cur = appState.tanks[f].current; const out = [];
+                for (let i = ds.length - 1; i >= 0; i--) { out[i] = r3(cur); cur -= net[ds[i]] || 0; }
+                lv.push({ label: f + ' (L)', data: out, borderColor: COL[f], backgroundColor: COL[f] + '22', fill: true, tension: 0.2, pointRadius: 0, borderWidth: 2 });
+                lv.push({ label: f + ' reorder point', data: ds.map(() => appState.tanks[f].min), borderColor: COL[f], borderDash: [6, 4], pointRadius: 0, borderWidth: 1.2, fill: false });
+            });
+            anMk('anStock', { type: 'line', data: { labels: ds.map(dm), datasets: lv }, options: { interaction: { mode: 'index', intersect: false }, scales: { x: { ticks: { maxTicksLimit: 12 }, grid: { display: false } }, y: { beginAtZero: true, ticks: { callback: v => fmt(v, 0) } } } } }, !hasLogs);
+
+            // Days of stock cover
+            const f30 = fpAdd(today, -30), cov = fuels.map(f => { const q = mIss.filter(l => l.fuelType === f && D(l) >= f30).reduce((t, l) => t + Number(l.quantity), 0) / 30; return { f, avg: q, d: q > 0 ? appState.tanks[f].current / q : null }; });
+            anMk('anCover', { type: 'bar', data: { labels: cov.map(c => c.f), datasets: [{ label: 'Days of cover', data: cov.map(c => c.d === null ? null : r2(c.d)), borderRadius: 6, maxBarThickness: 46, backgroundColor: cov.map(c => c.d === null ? '#64748b' : c.d < 7 ? '#fb7185' : c.d < 14 ? '#f59e0b' : '#34d399') }] }, options: { plugins: { legend: { display: false }, tooltip: { callbacks: { label: c => ' ' + fmt(c.parsed.y, 1) + ' days', afterLabel: c => 'Avg issue ' + fmt(cov[c.dataIndex].avg, 0) + ' L/day' } } }, scales: { x: { grid: { display: false } }, y: { beginAtZero: true, title: { display: true, text: 'Days', color: chartTxt(), font: { size: 10 } } } } } }, cov.every(c => c.d === null));
+
+            // Purchase price per litre
+            const pr = rcv.filter(l => inR(l) && Number(l.unitPrice) > 0), pd = [...new Set(pr.map(D))].sort();
+            anMk('anPrice', { type: 'line', data: { labels: pd.map(dm), datasets: fuels.map(f => ({ label: f, spanGaps: true, borderColor: COL[f], backgroundColor: COL[f], tension: 0.2, pointRadius: 3, data: pd.map(d => { const a = pr.filter(l => l.fuelType === f && D(l) === d); return a.length ? r2(a.reduce((t, l) => t + Number(l.unitPrice), 0) / a.length) : null; }) })) }, options: { scales: { x: { grid: { display: false } }, y: { title: { display: true, text: 'GH\u20b5 per litre', color: chartTxt(), font: { size: 10 } } } } } }, !pd.length);
+
+            // Last 12 months: spend and received vs issued
+            const g = ghParts(ghNow()), keys = [], lab = [];
+            for (let i = 11; i >= 0; i--) { const dt = new Date(Date.UTC(g.y, g.m - 1 - i, 1)); keys.push(dt.toISOString().slice(0, 7)); lab.push(dt.toLocaleDateString('en-US', { month: 'short', year: '2-digit', timeZone: 'UTC' })); }
+            const mon = (arr, fn) => { const o = keys.map(() => 0); arr.forEach(l => { const i = keys.indexOf(String(l.date).slice(0, 7)); if (i >= 0) o[i] += fn(l); }); return o.map(r2); };
+            const spend = fuels.map(f => ({ label: f, backgroundColor: COL[f], borderRadius: 4, maxBarThickness: 30, data: mon(rcv.filter(l => l.fuelType === f), l => Number(l.quantity) * (Number(l.unitPrice) || 0)) }));
+            anMk('anSpend', { type: 'bar', data: { labels: lab, datasets: spend }, options: { scales: { x: { stacked: true, grid: { display: false } }, y: { stacked: true, beginAtZero: true, ticks: { callback: v => fmt(v, 0) } } }, plugins: { tooltip: { callbacks: { label: c => ' ' + c.dataset.label + ': GH\u20b5 ' + fmt(c.parsed.y, 0) } } } } }, spend.every(d => d.data.every(v => !v)));
+            const mr = mon(rcv, l => Number(l.quantity)), mi = mon(mIss, l => Number(l.quantity));
+            anMk('anMonth', { type: 'bar', data: { labels: lab, datasets: [{ label: 'Received (L)', data: mr, backgroundColor: '#34d399', borderRadius: 4, maxBarThickness: 22 }, { label: 'Issued (L)', data: mi, backgroundColor: '#38bdf8', borderRadius: 4, maxBarThickness: 22 }] }, options: { interaction: { mode: 'index', intersect: false }, scales: { x: { grid: { display: false } }, y: { beginAtZero: true, ticks: { callback: v => fmt(v, 0) } } } } }, mr.every(v => !v) && mi.every(v => !v));
+
+            // Supplier payables ageing (from the purchases ledger)
+            const bk = [0, 0, 0, 0, 0], BL = ['Not yet due', '1-30 days', '31-60 days', '61-90 days', '90+ days'];
+            if (typeof fpCompute === 'function') fpData().suppliers.forEach(sp => fpCompute(sp.id).rows.forEach(r => {
+                if (!(r.d > 0) || !(r.remaining > 0)) return;
+                const od = r.due ? fpDiff(today, r.due) : 0;
+                bk[od <= 0 ? 0 : od <= 30 ? 1 : od <= 60 ? 2 : od <= 90 ? 3 : 4] += r.remaining;
+            }));
+            anMk('anAge', { type: 'bar', data: { labels: BL, datasets: [{ label: 'Outstanding', data: bk.map(r2), borderRadius: 6, backgroundColor: ['#34d399', '#facc15', '#f59e0b', '#fb923c', '#fb7185'] }] }, options: { plugins: { legend: { display: false }, tooltip: { callbacks: { label: c => ' GH\u20b5 ' + fmt(c.parsed.y, 2) } } }, scales: { x: { grid: { display: false } }, y: { beginAtZero: true, ticks: { callback: v => fmt(v, 0) } } } } }, bk.every(v => !v));
+
+            // Supplier volume and delivery shortage
+            const sup = {};
+            rcv.filter(inR).forEach(l => { const k = l.supplier || '(unknown)', o = sup[k] = sup[k] || { q: 0, s: 0 }; o.q += Number(l.quantity); o.s += Number(l.shortage) || 0; });
+            const sr = Object.entries(sup).sort((a, b) => b[1].q - a[1].q).slice(0, 10);
+            anMk('anSup', { data: { labels: sr.map(r => r[0]), datasets: [{ type: 'bar', label: 'Received (L)', data: sr.map(r => r[1].q), backgroundColor: '#38bdf8', borderRadius: 4, maxBarThickness: 36, yAxisID: 'y' }, { type: 'line', label: 'Shortage (L)', data: sr.map(r => r[1].s), borderColor: '#fb7185', backgroundColor: '#fb7185', pointRadius: 4, tension: 0.2, yAxisID: 'y1' }] }, options: { scales: { x: { grid: { display: false } }, y: { beginAtZero: true, ticks: { callback: v => fmt(v, 0) } }, y1: { position: 'right', beginAtZero: true, grid: { drawOnChartArea: false } } } } }, !sr.length);
+
+            // Fuel card position per base
+            const cs = CARD_BASES.map(b => cardStats(b));
+            anMk('anCard', { type: 'bar', data: { labels: CARD_BASES, datasets: [{ label: 'Loaded', data: cs.map(c => c.loaded), backgroundColor: '#34d399', borderRadius: 4 }, { label: 'Spent', data: cs.map(c => c.issued), backgroundColor: '#f59e0b', borderRadius: 4 }, { label: 'Balance', data: cs.map(c => c.balance), backgroundColor: cs.map(c => c.balance < 0 ? '#fb7185' : '#38bdf8'), borderRadius: 4 }] }, options: { scales: { x: { grid: { display: false } }, y: { ticks: { callback: v => fmt(v, 0) } } }, plugins: { tooltip: { callbacks: { label: c => ' ' + c.dataset.label + ': GH\u20b5 ' + fmt(c.parsed.y, 2) } } } } }, cs.every(c => !c.loaded && !c.issued));
+
+            // Fleet fuel efficiency from consecutive meter readings
+            const gen = AN.e === 'Gen Set', per = {};
+            appState.issueLogs.filter(l => fuelOk(l) && l.truckId && Number(l.meter) > 0 && inR(l) && issueCategory(l) === AN.e).forEach(l => (per[l.truckId] = per[l.truckId] || []).push(l));
+            let eff = [];
+            Object.entries(per).forEach(([id, a]) => {
+                if (a.length < 2) return;
+                a.sort((x, y) => String(x.date).localeCompare(String(y.date)));
+                const dist = Number(a[a.length - 1].meter) - Number(a[0].meter), lit = a.slice(1).reduce((t, l) => t + Number(l.quantity), 0);
+                if (dist > 0 && lit > 0) eff.push({ id, v: gen ? lit / dist : dist / lit, n: a.length });
+            });
+            const med = eff.length ? eff.map(x => x.v).sort((a, b) => a - b)[Math.floor(eff.length / 2)] : 0;
+            eff.sort((a, b) => gen ? b.v - a.v : a.v - b.v); eff = eff.slice(0, 15);
+            anMk('anEff', { type: 'bar', data: { labels: eff.map(e => e.id), datasets: [{ label: gen ? 'L per hour' : 'km per litre', data: eff.map(e => r2(e.v)), borderRadius: 4, maxBarThickness: 18, backgroundColor: eff.map(e => (gen ? e.v > med * 1.25 : e.v < med * 0.75) ? '#fb7185' : '#38bdf8') }] }, options: { indexAxis: 'y', plugins: { legend: { display: false }, tooltip: { callbacks: { label: c => ' ' + fmt(c.parsed.x, 2) + (gen ? ' L/hr' : ' km/L'), afterLabel: c => eff[c.dataIndex].n + ' fills \u00b7 median ' + fmt(med, 2) } } }, scales: { x: { beginAtZero: true }, y: { grid: { display: false } } } } }, !eff.length);
+        }
+
+        // 9. Reports
         let rptChartInstance = null;
         let lastReport = { vehicles: [], rows: [], label: '' };
 
@@ -6406,7 +6518,7 @@
     const TL_TABS = [
         ['dashboard', 'Dashboard'], ['receive', 'Receive Fuel Stock'], ['purchases', 'Fuel Purchases'], ['issue', 'Dispense & Issue'],
         ['cards', 'Fuel Cards'], ['fleet', 'Fleet Vehicles'], ['destinations', 'Destinations & Routes'],
-        ['reports', 'Reports'], ['reconciliation', 'Reconciliation'], ['settings', 'Settings']
+        ['reports', 'Reports'], ['analytics', 'Fuel Analytics'], ['reconciliation', 'Reconciliation'], ['settings', 'Settings']
     ];
     let tlUnlocked = new Set(), tlPending = null, tlOnOk = null, tlCancelable = true, tlFails = 0, tlBlockedUntil = 0, tlPass = false;
     const tlEl = id => document.getElementById(id);
@@ -6544,6 +6656,7 @@
             if (currentTab === 'dashboard') renderDashboardChart();
             else if (currentTab === 'reports') renderReports();
             else if (currentTab === 'reconciliation') renderAnalyticsCharts();
+            else if (currentTab === 'analytics') anRender();
         } catch (e) {}
     }
     function toggleTheme() { applyTheme(isLightTheme() ? 'dark' : 'light', true); }
